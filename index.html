@@ -1,0 +1,1934 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Salón — Gestión de ingresos</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700;800&display=swap');
+
+  /* ===================== Tema / paleta: Rosa antiguo & Carbón ===================== */
+  :root{
+    --bg:#f7f0f0;            /* rosa-crema muy suave */
+    --bg-2:#2c262b;          /* sidebar carbón */
+    --bg-3:#211c20;
+    --surface:#ffffff;
+    --surface-2:#f6ecee;
+    --surface-3:#ece0e3;
+    --border:#ebdee1;
+    --text:#3a2e33;
+    --text-dim:#8a7780;
+    --muted:#b09aa2;
+    --accent:#c08497;        /* rosa antiguo / malva */
+    --accent-2:#9c4a63;      /* rosa profundo (texto sobre claro) */
+    --accent-soft:rgba(192,132,151,.16);
+    --rose:#c9a24b;          /* oro (detalle secundario) */
+    --rose-soft:rgba(201,162,75,.18);
+    --green:#3f9d6d;
+    --amber:#c98a2b;
+    --red:#d4584f;
+    --teal:#3f8e9d;
+    --radius:16px;
+    --radius-sm:10px;
+    --shadow:0 8px 26px rgba(44,30,38,.10);
+    --font:'Inter',ui-sans-serif,system-ui,-apple-system,'Segoe UI',Roboto,Arial,sans-serif;
+    --serif:'Fraunces',Georgia,'Times New Roman',serif;
+  }
+
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%}
+  body{font-family:var(--font);background:var(--bg);color:var(--text);-webkit-font-smoothing:antialiased;font-size:14.5px}
+  button{font-family:inherit}
+
+  .app{display:flex;min-height:100vh}
+
+  /* ===================== Sidebar ===================== */
+  .sidebar{
+    width:252px;min-width:252px;
+    background:linear-gradient(180deg,#37313a 0%, var(--bg-2) 55%, var(--bg-3) 100%);
+    display:flex;flex-direction:column;position:sticky;top:0;height:100vh;
+  }
+  .brand{display:flex;align-items:center;gap:13px;padding:22px 20px 18px;border-bottom:1px solid rgba(255,255,255,.09)}
+  .logo-badge{
+    width:46px;height:46px;border-radius:13px;flex:none;display:grid;place-items:center;
+    background:linear-gradient(135deg,var(--accent),var(--accent-2));color:#fff;font-family:var(--serif);
+    font-size:22px;font-weight:600;box-shadow:0 6px 16px rgba(0,0,0,.35)}
+  .brand h1{font-size:16px;margin:0;line-height:1.1;font-weight:800;color:#fff;font-family:var(--serif);letter-spacing:.2px}
+  .brand span{font-size:11px;color:rgba(255,255,255,.5);font-weight:500}
+
+  .nav{padding:12px 12px;overflow-y:auto;flex:1}
+  .nav-group-label{font-size:10px;text-transform:uppercase;letter-spacing:.14em;color:rgba(255,255,255,.38);font-weight:700;margin:16px 12px 6px}
+  .nav-item{display:flex;align-items:center;gap:12px;width:100%;padding:10px 13px;margin:2px 0;border:0;background:transparent;color:rgba(255,255,255,.68);border-radius:11px;cursor:pointer;font-size:14px;font-weight:500;text-align:left;transition:.15s}
+  .nav-item:hover{background:rgba(255,255,255,.09);color:#fff}
+  .nav-item.active{background:rgba(192,132,151,.32);color:#fff;font-weight:600}
+  .nav-item .ic{width:20px;text-align:center;font-size:16px;flex:none;color:rgba(255,255,255,.55)}
+  .nav-item.active .ic{color:#fff}
+  .nav-item .count{margin-left:auto;background:rgba(255,255,255,.14);color:rgba(255,255,255,.82);font-size:11px;font-weight:700;border-radius:20px;padding:1px 8px;min-width:22px;text-align:center}
+  .nav-item.active .count{background:var(--accent);color:#fff}
+
+  .sidebar-foot{padding:14px 16px;border-top:1px solid rgba(255,255,255,.09);font-size:11.5px;color:rgba(255,255,255,.5)}
+  .local-pill{display:inline-flex;align-items:center;gap:8px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.14);padding:7px 11px;border-radius:20px;color:rgba(255,255,255,.8);font-weight:600;font-size:11.5px;width:100%;cursor:pointer}
+  .dot{width:8px;height:8px;border-radius:50%;background:var(--rose);box-shadow:0 0 0 3px rgba(201,162,75,.22)}
+
+  /* ===================== Contenido ===================== */
+  .content{flex:1;min-width:0;display:flex;flex-direction:column}
+  .topbar{display:flex;align-items:center;gap:16px;padding:18px 28px;border-bottom:1px solid var(--border);position:sticky;top:0;background:rgba(247,240,240,.86);backdrop-filter:blur(10px);z-index:5}
+  .topbar h2{margin:0;font-size:21px;font-weight:700;font-family:var(--serif)}
+  .topbar .sub{color:var(--text-dim);font-size:12.5px;margin-top:2px}
+  .topbar .spacer{flex:1}
+
+  .view-wrap{padding:26px 28px 70px;max-width:1220px;width:100%}
+  .view{display:none}
+  .view.active{display:block;animation:fade .25s ease}
+  @keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+
+  /* ===================== Componentes ===================== */
+  .btn{display:inline-flex;align-items:center;gap:8px;border:1px solid var(--border);background:var(--surface-2);color:var(--text);padding:9px 15px;border-radius:11px;cursor:pointer;font-size:13.5px;font-weight:600;transition:.15s;white-space:nowrap}
+  .btn:hover{background:var(--surface-3)}
+  .btn.primary{background:linear-gradient(135deg,#d2a0b0,var(--accent));border-color:transparent;color:#fff;box-shadow:0 6px 16px rgba(192,132,151,.32)}
+  .btn.primary:hover{filter:brightness(1.05)}
+  .btn.ghost{background:transparent}
+  .btn.danger{color:var(--red);border-color:transparent;background:transparent}
+  .btn.danger:hover{background:rgba(212,88,79,.12)}
+  .btn.sm{padding:6px 11px;font-size:12.5px}
+  .btn[disabled]{opacity:.45;cursor:not-allowed}
+
+  .card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow)}
+  .toolbar{display:flex;align-items:center;gap:12px;margin-bottom:18px;flex-wrap:wrap}
+  .toolbar .spacer{flex:1}
+
+  .field{position:relative}
+  .input,.select,textarea.input{width:100%;background:var(--surface-2);border:1px solid var(--border);color:var(--text);padding:10px 12px;border-radius:11px;font-size:13.5px;outline:none;transition:.15s;font-family:inherit}
+  .input::placeholder{color:var(--muted)}
+  .input:focus,.select:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+  .search{max-width:300px}
+  .search .input{padding-left:36px}
+  .search .mag{position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--muted);font-size:14px}
+
+  table{width:100%;border-collapse:collapse}
+  thead th{text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);font-weight:700;padding:12px 16px;border-bottom:1px solid var(--border)}
+  tbody td{padding:13px 16px;border-bottom:1px solid var(--border);font-size:13.5px;vertical-align:middle}
+  tbody tr:last-child td{border-bottom:0}
+  tbody tr:hover{background:var(--surface-2)}
+  .t-main{font-weight:600}
+  .t-sub{color:var(--text-dim);font-size:12px;margin-top:2px}
+  .num{text-align:right;white-space:nowrap}
+  .row-actions{display:flex;gap:4px;justify-content:flex-end}
+  .money{font-weight:700;font-variant-numeric:tabular-nums}
+
+  .tag{display:inline-flex;align-items:center;gap:6px;padding:3px 10px;border-radius:20px;font-size:11.5px;font-weight:700;border:1px solid transparent}
+  .tag.bronze{background:var(--accent-soft);color:var(--accent-2)}
+  .tag.rose{background:var(--rose-soft);color:#8a6817}
+  .tag.gray{background:var(--surface-3);color:var(--text-dim)}
+  .tag.green{background:rgba(63,157,109,.15);color:#2c7350}
+  .tag.amber{background:rgba(201,138,43,.16);color:#946217}
+  .tag.teal{background:rgba(63,142,157,.15);color:#2c6c77}
+
+  .empty{text-align:center;padding:56px 20px;color:var(--text-dim)}
+  .empty .big{font-size:46px;margin-bottom:10px;opacity:.55}
+  .empty h3{margin:0 0 6px;color:var(--text);font-weight:700;font-family:var(--serif)}
+  .empty p{margin:0 auto 18px;max-width:400px;font-size:13.5px;line-height:1.5}
+
+  /* Dashboard */
+  .stat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;margin-bottom:22px}
+  .stat{padding:18px;display:flex;flex-direction:column;gap:8px}
+  .stat .lbl{color:var(--text-dim);font-size:12.5px;font-weight:600;display:flex;align-items:center;gap:8px}
+  .stat .lbl .ic{width:30px;height:30px;border-radius:9px;display:grid;place-items:center;font-size:15px}
+  .stat .val{font-size:27px;font-weight:800;letter-spacing:-.5px;font-variant-numeric:tabular-nums}
+  .stat .foot{font-size:11.5px;color:var(--muted)}
+  .ic-bronze{background:var(--accent-soft);color:var(--accent-2)}
+  .ic-rose{background:var(--rose-soft);color:#8a6817}
+  .ic-green{background:rgba(63,157,109,.15);color:#2c7350}
+  .ic-teal{background:rgba(63,142,157,.15);color:#2c6c77}
+
+  .panel-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+  @media(max-width:900px){.panel-grid{grid-template-columns:1fr}}
+  .panel-head{display:flex;align-items:center;justify-content:space-between;padding:15px 18px;border-bottom:1px solid var(--border)}
+  .panel-head h3{margin:0;font-size:15px;font-weight:700;font-family:var(--serif)}
+
+  .bar-row{display:flex;align-items:center;gap:12px;padding:10px 18px}
+  .bar-row .name{width:130px;font-size:13px;font-weight:600;flex:none;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .bar-track{flex:1;height:10px;background:var(--surface-3);border-radius:20px;overflow:hidden}
+  .bar-fill{height:100%;background:linear-gradient(90deg,var(--accent),var(--rose));border-radius:20px}
+  .bar-val{width:110px;text-align:right;font-size:12.5px;font-weight:700;font-variant-numeric:tabular-nums;flex:none}
+
+  /* ===================== Modal ===================== */
+  #modal-root{position:fixed;inset:0;display:none;z-index:50}
+  #modal-root.open{display:block}
+  .modal-overlay{position:absolute;inset:0;background:rgba(28,22,27,.55);backdrop-filter:blur(3px);display:grid;place-items:center;padding:20px;animation:fade .18s ease}
+  .modal{width:100%;max-width:540px;background:var(--surface);border:1px solid var(--border);border-radius:18px;box-shadow:var(--shadow);max-height:92vh;display:flex;flex-direction:column;animation:pop .2s ease}
+  @keyframes pop{from{transform:scale(.96);opacity:0}to{transform:none;opacity:1}}
+  .modal-head{display:flex;align-items:center;justify-content:space-between;padding:18px 22px;border-bottom:1px solid var(--border)}
+  .modal-head h3{margin:0;font-size:17px;font-weight:700;font-family:var(--serif)}
+  .modal-body{padding:22px;overflow-y:auto}
+  .modal-foot{display:flex;gap:10px;justify-content:flex-end;padding:16px 22px;border-top:1px solid var(--border)}
+  .icon-btn{background:transparent;border:0;color:var(--muted);font-size:24px;cursor:pointer;line-height:1;padding:2px 6px;border-radius:8px}
+  .icon-btn:hover{background:var(--surface-2);color:var(--text)}
+
+  .form-row{margin-bottom:15px}
+  .form-row.two{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .form-row.three{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
+  @media(max-width:520px){.form-row.two,.form-row.three{grid-template-columns:1fr}}
+  label.lbl{display:block;font-size:12px;font-weight:600;color:var(--text-dim);margin-bottom:6px}
+  label.lbl .req{color:var(--accent)}
+  .hint{font-size:11.5px;margin-top:5px;color:var(--muted)}
+  .hint.err{color:var(--red)}
+  .input.invalid{border-color:var(--red)}
+  .calc-box{background:var(--surface-2);border:1px dashed var(--border);border-radius:12px;padding:12px 14px;font-size:12.5px;color:var(--text-dim)}
+  .calc-box b{color:var(--text)}
+
+  /* Toast */
+  #toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(20px);opacity:0;background:var(--bg-2);color:#fff;padding:11px 18px;border-radius:12px;font-size:13.5px;font-weight:600;box-shadow:var(--shadow);z-index:80;transition:.25s;pointer-events:none}
+  #toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+  #toast .check{color:var(--green);margin-right:8px}
+
+  ::-webkit-scrollbar{width:10px;height:10px}
+  ::-webkit-scrollbar-thumb{background:#e2cfd5;border-radius:10px;border:2px solid transparent;background-clip:padding-box}
+
+  .seg{display:inline-flex;background:var(--surface-2);border:1px solid var(--border);border-radius:11px;padding:3px;gap:2px}
+  .seg button{border:0;background:transparent;padding:7px 13px;border-radius:8px;font-size:12.5px;font-weight:600;color:var(--text-dim);cursor:pointer}
+  .seg button.on{background:var(--surface);color:var(--accent-2);box-shadow:0 1px 4px rgba(0,0,0,.06)}
+
+  .chips{display:flex;flex-wrap:wrap;gap:8px}
+  .chip{display:inline-flex;align-items:center;gap:7px;background:var(--surface-2);border:1px solid var(--border);border-radius:20px;padding:5px 6px 5px 13px;font-size:12.5px;font-weight:600}
+  .chip .x{cursor:pointer;color:var(--muted);font-size:15px;width:18px;height:18px;display:grid;place-items:center;border-radius:50%}
+  .chip .x:hover{background:var(--surface-3);color:var(--red)}
+
+  th.sortable{cursor:pointer;user-select:none;white-space:nowrap}
+  th.sortable:hover{color:var(--accent-2)}
+  th.sortable .arr{opacity:.45;font-size:10px;margin-left:2px}
+  th.sortable.on .arr{opacity:1;color:var(--accent)}
+  .arqueo-row{display:flex;align-items:center;justify-content:space-between;padding:11px 18px;border-bottom:1px solid var(--border);font-size:13.5px}
+  .arqueo-row:last-child{border-bottom:0}
+  .arqueo-row b{font-variant-numeric:tabular-nums}
+  .arqueo-row.total{background:var(--surface-2);font-weight:600}
+  .arqueo-row.total b{font-size:17px;color:var(--accent-2)}
+
+  .sync-status{padding:11px 14px;border-radius:11px;font-size:13px;font-weight:600;border:1px solid var(--border);line-height:1.5}
+  .sync-ok{background:rgba(63,157,109,.12);border-color:rgba(63,157,109,.4);color:#2c7350}
+  .sync-err{background:rgba(212,88,79,.12);border-color:rgba(212,88,79,.4);color:#a33}
+  .sync-info{background:var(--accent-soft);border-color:rgba(192,132,151,.4);color:var(--accent-2)}
+  .sync-warn{background:rgba(201,162,75,.16);border-color:rgba(201,162,75,.5);color:#8a6817}
+
+  @media print{
+    .sidebar,.topbar,#topbar-action,.no-print{display:none !important}
+    .content{margin:0}
+    .view-wrap{padding:0;max-width:none}
+    body{background:#fff}
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <!-- ============ SIDEBAR ============ -->
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="logo-badge" id="brand-badge">S</div>
+      <div>
+        <h1 id="brand-name">Salón</h1>
+        <span>Gestión de ingresos</span>
+      </div>
+    </div>
+    <nav class="nav" id="nav">
+      <button class="nav-item" data-view="dashboard"><span class="ic">&#128202;</span> Dashboard</button>
+
+      <div class="nav-group-label">Operación</div>
+      <button class="nav-item" data-view="ventas"><span class="ic">&#128176;</span> Ventas / Ingresos <span class="count" id="cnt-ventas">0</span></button>
+      <button class="nav-item" data-view="egresos"><span class="ic">&#128184;</span> Egresos <span class="count" id="cnt-egresos">0</span></button>
+      <button class="nav-item" data-view="cierre"><span class="ic">&#129534;</span> Cierre de caja</button>
+
+      <div class="nav-group-label">Análisis</div>
+      <button class="nav-item" data-view="reportes"><span class="ic">&#128200;</span> Reportes</button>
+      <button class="nav-item" data-view="comisiones"><span class="ic">&#129689;</span> Comisiones</button>
+
+      <div class="nav-group-label">Registro</div>
+      <button class="nav-item" data-view="peluqueros"><span class="ic">&#9986;</span> Peluqueros <span class="count" id="cnt-pelu">0</span></button>
+      <button class="nav-item" data-view="config"><span class="ic">&#9881;</span> Configuración</button>
+
+      <div class="nav-group-label">Datos</div>
+      <button class="nav-item" data-view="sync"><span class="ic">&#128259;</span> Sincronización</button>
+      <button class="nav-item" data-view="datos"><span class="ic">&#128190;</span> Respaldo local</button>
+    </nav>
+    <div class="sidebar-foot">
+      <span class="local-pill" id="local-pill" onclick="navigate('config')"><span class="dot"></span> <span id="local-pill-txt">Local sin definir</span></span>
+    </div>
+  </aside>
+
+  <!-- ============ CONTENIDO ============ -->
+  <div class="content">
+    <header class="topbar">
+      <div>
+        <h2 id="view-title">Dashboard</h2>
+        <div class="sub" id="view-sub">Resumen del salón</div>
+      </div>
+      <div class="spacer"></div>
+      <div id="topbar-action"></div>
+    </header>
+
+    <div class="view-wrap">
+      <section id="view-dashboard" class="view"></section>
+      <section id="view-ventas" class="view"></section>
+      <section id="view-egresos" class="view"></section>
+      <section id="view-cierre" class="view"></section>
+      <section id="view-reportes" class="view"></section>
+      <section id="view-comisiones" class="view"></section>
+      <section id="view-peluqueros" class="view"></section>
+      <section id="view-config" class="view"></section>
+      <section id="view-sync" class="view"></section>
+      <section id="view-datos" class="view"></section>
+    </div>
+  </div>
+</div>
+
+<div id="modal-root"></div>
+<div id="toast"></div>
+
+<script>
+/* =========================================================================
+   SALÓN — Gestión de ingresos (single-file, localStorage)
+   Decisiones del proyecto:
+   - "Cada local por separado": los datos viven en este dispositivo. La
+     consolidación de los 3 locales se hace exportando JSON desde cada uno e
+     importando con FUSIÓN por id de venta (no se pisan). Ver vista "Datos".
+   - Comisión: % por peluquero. Cada venta guarda un snapshot del % usado, así
+     cambiar el % de un peluquero no reescribe el historial.
+   ========================================================================= */
+
+/* ----------------------------- Utilidades ------------------------------ */
+const $  = (s,el=document)=>el.querySelector(s);
+const $$ = (s,el=document)=>Array.from(el.querySelectorAll(s));
+
+function uid(){
+  return (window.crypto && crypto.randomUUID)
+    ? crypto.randomUUID()
+    : 'id-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,8);
+}
+function esc(s){
+  return String(s==null?'':s).replace(/[&<>"']/g,c=>(
+    {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+function money(n){ n=Number(n)||0; return '$'+Math.round(n).toLocaleString('es-CL'); }
+function todayISO(){ const d=new Date(); d.setMinutes(d.getMinutes()-d.getTimezoneOffset()); return d.toISOString().slice(0,10); }
+function nowHM(){ const d=new Date(); return String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0'); }
+function monthISO(){ return todayISO().slice(0,7); }
+function fmtFecha(iso){ if(!iso) return '—'; const [y,m,d]=iso.split('-'); return `${d}/${m}/${y}`; }
+function startOfMonth(){ return monthISO()+'-01'; }
+
+function toast(msg){
+  const t=$('#toast');
+  t.innerHTML='<span class="check">&#10003;</span>'+esc(msg);
+  t.classList.add('show');
+  clearTimeout(toast._t);
+  toast._t=setTimeout(()=>t.classList.remove('show'),2200);
+}
+
+/* ------------------------------- STORE --------------------------------- */
+const DEFAULT_FORMAS = ['Efectivo','Débito','Crédito','Transferencia'];
+const DEFAULT_SERVICIOS = ['Corte','Color / Tintura','Peinado / Brushing','Mechas','Tratamiento','Manicura','Pedicura','Barba','Depilación','Otros'];
+const DEFAULT_CATEGORIAS_EGRESO = ['Insumos','Arriendo','Sueldos','Servicios básicos','Retiro de caja','Comisiones pagadas','Otros'];
+
+const Store = {
+  KEY:'salon.ingresos.v1',
+  data:null,
+
+  _empty(){
+    return {
+      config:{
+        salonNombre:'Salón Sonia Nuñez',
+        localActual:'',                 // id del local de ESTE dispositivo
+        locales:[],                     // [{id,nombre,direccion}]
+        formasPago:DEFAULT_FORMAS.slice(),
+        servicios:DEFAULT_SERVICIOS.slice(),
+        categoriasEgreso:DEFAULT_CATEGORIAS_EGRESO.slice()
+      },
+      peluqueros:[],                    // [{id,nombre,comisionPct,activo,createdAt}]
+      ventas:[],                        // ver insertVenta
+      egresos:[],                       // [{id,fecha,hora,localId,categoria,monto,formaPago,detalle,notas}]
+      fondos:[]                         // [{id,localId,fecha,monto,updatedAt}] fondo inicial por local+día
+    };
+  },
+
+  load(){
+    try{
+      const raw=localStorage.getItem(this.KEY);
+      this.data = raw ? Object.assign(this._empty(), JSON.parse(raw)) : this._empty();
+    }catch(e){ console.warn('Store.load falló',e); this.data=this._empty(); }
+    // normalizar config y crear 3 locales por defecto la primera vez
+    const c=this.data.config = Object.assign(this._empty().config, this.data.config||{});
+    // IDs FIJOS e idénticos en todos los equipos: indispensable para que la planilla
+    // compartida funcione (una venta de un local se reconoce en los otros equipos).
+    const BRAND_LOCALES=[
+      {id:'local-unimarc', nombre:'Pelu Unimarc', direccion:'Av. Gabriela Mistral 900, Local 8'},
+      {id:'local-outlet',  nombre:'Pelu Outlet',  direccion:'Av. Ferrocarril'},
+      {id:'local-varas',   nombre:'Pelu Varas',   direccion:'Av. Varas'}
+    ];
+    if(!Array.isArray(c.locales) || c.locales.length===0){
+      c.locales=BRAND_LOCALES.map(b=>({id:b.id,nombre:b.nombre,direccion:b.direccion}));
+    }
+    // Migración de marca (una sola vez): renombra locales genéricos
+    if(!c._brand){
+      if(c.salonNombre==='Salón'||!c.salonNombre) c.salonNombre='Salón Sonia Nuñez';
+      c.locales.forEach((l,i)=>{
+        if(BRAND_LOCALES[i] && /^Local [123]$/.test(l.nombre||'')){
+          l.nombre=BRAND_LOCALES[i].nombre;
+          if(!l.direccion) l.direccion=BRAND_LOCALES[i].direccion;
+        }
+      });
+      c._brand=true;
+    }
+    // Migración a IDs fijos (una sola vez): reasigna ids y remapea referencias en ventas/egresos/fondos
+    if(!c._fixedLocalIds){
+      const remap={};
+      c.locales.forEach((l,i)=>{ const fx=BRAND_LOCALES[i]; if(fx && l.id!==fx.id){ remap[l.id]=fx.id; l.id=fx.id; if(!l.direccion) l.direccion=fx.direccion; } });
+      if(Object.keys(remap).length){
+        ['ventas','egresos','fondos'].forEach(col=>{ if(Array.isArray(this.data[col])) this.data[col].forEach(r=>{ if(remap[r.localId]) r.localId=remap[r.localId]; }); });
+        if(remap[c.localActual]) c.localActual=remap[c.localActual];
+      }
+      c._fixedLocalIds=true;
+    }
+    if(!c.localActual) c.localActual=c.locales[0].id;
+    if(!Array.isArray(c.formasPago)||!c.formasPago.length) c.formasPago=DEFAULT_FORMAS.slice();
+    if(!Array.isArray(c.servicios)||!c.servicios.length) c.servicios=DEFAULT_SERVICIOS.slice();
+    if(!Array.isArray(c.categoriasEgreso)||!c.categoriasEgreso.length) c.categoriasEgreso=DEFAULT_CATEGORIAS_EGRESO.slice();
+    if(!Array.isArray(this.data.peluqueros)) this.data.peluqueros=[];
+    if(!Array.isArray(this.data.ventas)) this.data.ventas=[];
+    if(!Array.isArray(this.data.egresos)) this.data.egresos=[];
+    if(!Array.isArray(this.data.fondos)) this.data.fondos=[];
+    if(!this.data.gsConfig) this.data.gsConfig={clientId:'',sheetId:''};
+    try{ this.save(); }catch(e){}
+  },
+  save(){ localStorage.setItem(this.KEY, JSON.stringify(this.data)); },
+
+  config(){ return this.data.config; },
+  setConfig(patch){ Object.assign(this.data.config, patch); this.save(); },
+
+  /* Locales */
+  locales(){ return this.data.config.locales; },
+  localNombre(id){ const l=this.locales().find(x=>x.id===id); return l?l.nombre:'—'; },
+  localDireccion(id){ const l=this.locales().find(x=>x.id===id); return l?(l.direccion||''):''; },
+  localActualId(){ return this.data.config.localActual; },
+
+  /* Peluqueros */
+  peluqueros(){ return this.data.peluqueros; },
+  peluqueroActivos(){ return this.data.peluqueros.filter(p=>p.activo!==false); },
+  getPelu(id){ return this.data.peluqueros.find(p=>p.id===id)||null; },
+  peluNombre(id){ const p=this.getPelu(id); return p?p.nombre:'—'; },
+  insertPelu(obj){ obj.id=obj.id||uid(); obj.createdAt=obj.createdAt||Date.now(); obj.updatedAt=Date.now(); obj.activo=obj.activo!==false; this.data.peluqueros.push(obj); this.save(); return obj; },
+  updatePelu(id,patch){ const p=this.getPelu(id); if(!p) return; Object.assign(p,patch,{updatedAt:Date.now()}); this.save(); },
+  removePelu(id){ this.data.peluqueros=this.data.peluqueros.filter(p=>p.id!==id); this.save(); },
+
+  /* Ventas */
+  ventas(){ return this.data.ventas; },
+  getVenta(id){ return this.data.ventas.find(v=>v.id===id)||null; },
+  insertVenta(obj){
+    obj.id=obj.id||uid();
+    obj.createdAt=obj.createdAt||Date.now();
+    obj.updatedAt=Date.now();
+    this.data.ventas.push(obj); this.save(); return obj;
+  },
+  updateVenta(id,patch){ const v=this.getVenta(id); if(!v) return null; Object.assign(v,patch,{updatedAt:Date.now()}); this.save(); return v; },
+  removeVenta(id){ this.data.ventas=this.data.ventas.filter(v=>v.id!==id); this.save(); },
+
+  /* Egresos */
+  egresos(){ return this.data.egresos; },
+  getEgreso(id){ return this.data.egresos.find(e=>e.id===id)||null; },
+  insertEgreso(obj){ obj.id=obj.id||uid(); obj.createdAt=obj.createdAt||Date.now(); obj.updatedAt=Date.now(); this.data.egresos.push(obj); this.save(); return obj; },
+  updateEgreso(id,patch){ const e=this.getEgreso(id); if(!e) return null; Object.assign(e,patch,{updatedAt:Date.now()}); this.save(); return e; },
+  removeEgreso(id){ this.data.egresos=this.data.egresos.filter(e=>e.id!==id); this.save(); },
+
+  /* Fondo inicial de caja por local+fecha */
+  fondoDe(localId,fecha){ const f=this.data.fondos.find(x=>x.localId===localId && x.fecha===fecha); return f?(Number(f.monto)||0):0; },
+  setFondo(localId,fecha,monto){
+    let f=this.data.fondos.find(x=>x.localId===localId && x.fecha===fecha);
+    if(f){ f.monto=Number(monto)||0; f.updatedAt=Date.now(); }
+    else this.data.fondos.push({id:uid(),localId,fecha,monto:Number(monto)||0,updatedAt:Date.now()});
+    this.save();
+  },
+
+  exportJSON(){ return JSON.stringify(this.data,null,2); }
+};
+
+/* Calcula comisión: monto * pct/100, redondeado */
+function calcComision(monto, pct){ return Math.round((Number(monto)||0)*(Number(pct)||0)/100); }
+
+/* ------------------------------ Router --------------------------------- */
+const TITLES = {
+  dashboard:['Dashboard','Resumen del salón'],
+  ventas:['Ventas / Ingresos','Registro de cada venta por peluquero, pago y local'],
+  egresos:['Egresos','Gastos y salidas de dinero por local'],
+  cierre:['Cierre de caja','Arqueo de efectivo y totales del día'],
+  reportes:['Reportes','Ingresos por peluquero, local, servicio y forma de pago'],
+  comisiones:['Comisiones','Liquidación a pagar por peluquero'],
+  peluqueros:['Peluqueros','Equipo y porcentaje de comisión'],
+  config:['Configuración','Salón, locales, formas de pago y servicios'],
+  sync:['Sincronización','Planilla compartida de Google Sheets (los 3 locales, sin pisarse)'],
+  datos:['Datos y respaldo','Exportar, importar y consolidar los 3 locales']
+};
+
+const state = { view:'dashboard', params:{} };
+
+function navigate(view, params={}){
+  state.view=view; state.params=params;
+  $$('.nav-item').forEach(n=>n.classList.toggle('active', n.dataset.view===view));
+  $$('.view').forEach(v=>v.classList.remove('active'));
+  const el=document.getElementById('view-'+view);
+  if(el) el.classList.add('active');
+  const t=TITLES[view]||['',''];
+  $('#view-title').textContent=t[0];
+  $('#view-sub').textContent=t[1];
+  $('#topbar-action').innerHTML='';
+  renderView(view);
+  window.scrollTo(0,0);
+}
+
+function renderView(view){
+  switch(view){
+    case 'dashboard':  renderDashboard(); break;
+    case 'ventas':     renderVentas(); break;
+    case 'egresos':    renderEgresos(); break;
+    case 'cierre':     renderCierre(); break;
+    case 'reportes':   renderReportes(); break;
+    case 'comisiones': renderComisiones(); break;
+    case 'peluqueros': renderPeluqueros(); break;
+    case 'config':     renderConfig(); break;
+    case 'sync':       renderSync(); break;
+    case 'datos':      renderDatos(); break;
+  }
+  refreshChrome();
+}
+
+function refreshChrome(){
+  $('#cnt-ventas').textContent=Store.ventas().length;
+  const ce=$('#cnt-egresos'); if(ce) ce.textContent=Store.egresos().length;
+  $('#cnt-pelu').textContent=Store.peluqueroActivos().length;
+  const c=Store.config();
+  $('#brand-name').textContent=c.salonNombre||'Salón';
+  $('#brand-badge').textContent=(c.salonNombre||'S').trim().charAt(0).toUpperCase()||'S';
+  $('#local-pill-txt').textContent='Este equipo: '+Store.localNombre(c.localActual);
+}
+
+/* ------------------------------- Modal --------------------------------- */
+function openModal(title, bodyHTML, footHTML){
+  $('#modal-root').innerHTML = `
+    <div class="modal-overlay">
+      <div class="modal" role="dialog" aria-modal="true">
+        <div class="modal-head">
+          <h3>${esc(title)}</h3>
+          <button class="icon-btn" data-close aria-label="Cerrar">&times;</button>
+        </div>
+        <div class="modal-body">${bodyHTML}</div>
+        ${footHTML?`<div class="modal-foot">${footHTML}</div>`:''}
+      </div>
+    </div>`;
+  $('#modal-root').classList.add('open');
+}
+function closeModal(){ const r=$('#modal-root'); r.classList.remove('open'); r.innerHTML=''; }
+document.addEventListener('click',e=>{
+  if(e.target.classList && e.target.classList.contains('modal-overlay')){ closeModal(); return; }
+  if(e.target.closest('[data-close]')) closeModal();
+});
+document.addEventListener('keydown',e=>{ if(e.key==='Escape') closeModal(); });
+
+function confirmDialog(msg, onYes, yesLabel='Eliminar'){
+  openModal('Confirmar',
+    `<p style="margin:0;color:var(--text-dim);line-height:1.5">${esc(msg)}</p>`,
+    `<button class="btn" data-close>Cancelar</button>
+     <button class="btn primary" id="confirm-yes" style="background:linear-gradient(135deg,var(--red),#b53e36);box-shadow:none">${esc(yesLabel)}</button>`);
+  $('#confirm-yes').onclick=()=>{ onYes(); closeModal(); };
+}
+
+/* =============================== Filtros helper ======================== */
+function ventasFiltradas(f){
+  let l=Store.ventas().slice();
+  if(f.desde) l=l.filter(v=>v.fecha>=f.desde);
+  if(f.hasta) l=l.filter(v=>v.fecha<=f.hasta);
+  if(f.localId) l=l.filter(v=>v.localId===f.localId);
+  if(f.peluqueroId) l=l.filter(v=>v.peluqueroId===f.peluqueroId);
+  if(f.formaPago) l=l.filter(v=>v.formaPago===f.formaPago);
+  if(f.servicio) l=l.filter(v=>v.servicio===f.servicio);
+  if(f.q){ const q=f.q.toLowerCase(); l=l.filter(v=>
+    (Store.peluNombre(v.peluqueroId)||'').toLowerCase().includes(q) ||
+    (v.servicio||'').toLowerCase().includes(q) ||
+    (v.folio||'').toLowerCase().includes(q) ||
+    (v.notas||'').toLowerCase().includes(q)); }
+  return l;
+}
+function sum(arr,key){ return arr.reduce((s,x)=>s+(Number(x[key])||0),0); }
+
+function egresosFiltrados(f){
+  let l=Store.egresos().slice();
+  if(f.desde) l=l.filter(x=>x.fecha>=f.desde);
+  if(f.hasta) l=l.filter(x=>x.fecha<=f.hasta);
+  if(f.localId) l=l.filter(x=>x.localId===f.localId);
+  if(f.categoria) l=l.filter(x=>x.categoria===f.categoria);
+  if(f.formaPago) l=l.filter(x=>x.formaPago===f.formaPago);
+  if(f.q){ const q=f.q.toLowerCase(); l=l.filter(x=>
+    (x.categoria||'').toLowerCase().includes(q) ||
+    (x.detalle||'').toLowerCase().includes(q) ||
+    (x.notas||'').toLowerCase().includes(q)); }
+  return l;
+}
+
+/* ---- ordenamiento por columnas (headers clickeables) ---- */
+const VENTA_GETTERS = {
+  fecha:v=>(v.fecha||'')+(v.hora||''), local:v=>Store.localNombre(v.localId), peluquero:v=>Store.peluNombre(v.peluqueroId),
+  servicio:v=>v.servicio||'', pago:v=>v.formaPago||'', monto:v=>Number(v.monto)||0, comision:v=>Number(v.comision)||0, folio:v=>v.folio||''
+};
+const EGRESO_GETTERS = {
+  fecha:e=>(e.fecha||'')+(e.hora||''), local:e=>Store.localNombre(e.localId), categoria:e=>e.categoria||'',
+  pago:e=>e.formaPago||'', monto:e=>Number(e.monto)||0, detalle:e=>e.detalle||''
+};
+function applySort(list, sort, getters){
+  if(!sort || !sort.key || !getters[sort.key]) return list;
+  const g=getters[sort.key], dir=sort.dir==='desc'?-1:1;
+  return list.slice().sort((a,b)=>{
+    let va=g(a), vb=g(b);
+    if(typeof va==='number' && typeof vb==='number') return (va-vb)*dir;
+    va=(va==null?'':String(va)).toLowerCase(); vb=(vb==null?'':String(vb)).toLowerCase();
+    return va<vb?-1*dir:(va>vb?1*dir:0);
+  });
+}
+function sortTh(label, key, sort, cls){
+  const active = sort && sort.key===key;
+  const arr = active ? (sort.dir==='desc'?'▼':'▲') : '⇅';
+  return `<th class="sortable${active?' on':''}${cls?' '+cls:''}" data-sort="${key}">${esc(label)} <span class="arr">${arr}</span></th>`;
+}
+function wireSortHeaders(scopeSel, p, rerender){
+  $$(scopeSel+' th[data-sort]').forEach(th=>th.onclick=()=>{
+    const key=th.dataset.sort;
+    if(!p.sort || p.sort.key!==key) p.sort={key,dir:'asc'};
+    else if(p.sort.dir==='asc') p.sort={key,dir:'desc'};
+    else p.sort=null;            // tercer clic: vuelve al orden por defecto
+    rerender();
+  });
+}
+
+/* ============================ DASHBOARD ================================= */
+function renderDashboard(){
+  const ventas=Store.ventas();
+  const el=$('#view-dashboard');
+
+  if(Store.peluqueros().length===0 && ventas.length===0){
+    el.innerHTML=`
+      <div class="card empty">
+        <div class="big">&#128132;</div>
+        <h3>Bienvenido a tu salón</h3>
+        <p>Empieza configurando tu equipo de peluqueros y registrando ventas. También puedes cargar datos de ejemplo para ver cómo funciona todo.</p>
+        <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap">
+          <button class="btn primary" onclick="navigate('peluqueros')">&#43; Agregar peluqueros</button>
+          <button class="btn" id="seed-btn">Cargar datos de ejemplo</button>
+        </div>
+      </div>`;
+    $('#seed-btn').onclick=()=>{ seedDemo(); navigate('dashboard'); toast('Datos de ejemplo cargados'); };
+    return;
+  }
+
+  const hoy=todayISO(), mes=monthISO();
+  const vHoy=ventas.filter(v=>v.fecha===hoy);
+  const vMes=ventas.filter(v=>(v.fecha||'').slice(0,7)===mes);
+  const ingHoy=sum(vHoy,'monto'), ingMes=sum(vMes,'monto');
+  const comMes=sum(vMes,'comision');
+  const netoMes=ingMes-comMes;
+
+  // ranking peluqueros del mes
+  const porPelu={};
+  vMes.forEach(v=>{ porPelu[v.peluqueroId]=(porPelu[v.peluqueroId]||0)+(Number(v.monto)||0); });
+  const ranking=Object.entries(porPelu).map(([id,total])=>({id,total})).sort((a,b)=>b.total-a.total).slice(0,6);
+  const maxR=ranking.length?ranking[0].total:1;
+
+  // por local del mes
+  const porLocal=Store.locales().map(l=>({nombre:l.nombre, total:sum(vMes.filter(v=>v.localId===l.id),'monto')}));
+  // por forma de pago del mes
+  const porPago=Store.config().formasPago.map(fp=>({nombre:fp, total:sum(vMes.filter(v=>v.formaPago===fp),'monto')})).filter(x=>x.total>0);
+  const maxL=Math.max(1,...porLocal.map(x=>x.total));
+
+  el.innerHTML=`
+    <div class="stat-grid">
+      <div class="card stat">
+        <div class="lbl"><span class="ic ic-bronze">&#128181;</span> Ingresos hoy</div>
+        <div class="val">${money(ingHoy)}</div>
+        <div class="foot">${vHoy.length} venta(s) · ${fmtFecha(hoy)}</div>
+      </div>
+      <div class="card stat">
+        <div class="lbl"><span class="ic ic-teal">&#128197;</span> Ingresos del mes</div>
+        <div class="val">${money(ingMes)}</div>
+        <div class="foot">${vMes.length} venta(s) este mes</div>
+      </div>
+      <div class="card stat">
+        <div class="lbl"><span class="ic ic-rose">&#129689;</span> Comisiones del mes</div>
+        <div class="val" style="color:var(--accent-2)">${money(comMes)}</div>
+        <div class="foot">a pagar al equipo</div>
+      </div>
+      <div class="card stat">
+        <div class="lbl"><span class="ic ic-green">&#127974;</span> Neto salón (mes)</div>
+        <div class="val" style="color:#2c7350">${money(netoMes)}</div>
+        <div class="foot">ingresos − comisiones</div>
+      </div>
+    </div>
+
+    <div class="panel-grid">
+      <div class="card">
+        <div class="panel-head"><h3>Ranking peluqueros (mes)</h3>
+          <button class="btn sm ghost" onclick="navigate('reportes')">Ver reportes</button></div>
+        <div style="padding:8px 0">
+          ${ranking.length?ranking.map(r=>`
+            <div class="bar-row">
+              <span class="name">${esc(Store.peluNombre(r.id))}</span>
+              <span class="bar-track"><span class="bar-fill" style="width:${Math.max(4,r.total/maxR*100)}%"></span></span>
+              <span class="bar-val">${money(r.total)}</span>
+            </div>`).join('') : '<div style="padding:18px;color:var(--muted)">Sin ventas este mes.</div>'}
+        </div>
+      </div>
+      <div class="card">
+        <div class="panel-head"><h3>Ingresos por local (mes)</h3>
+          <button class="btn sm ghost" onclick="navigate('cierre')">Cierre de caja</button></div>
+        <div style="padding:8px 0">
+          ${porLocal.map(l=>`
+            <div class="bar-row">
+              <span class="name">${esc(l.nombre)}</span>
+              <span class="bar-track"><span class="bar-fill" style="width:${Math.max(4,l.total/maxL*100)}%"></span></span>
+              <span class="bar-val">${money(l.total)}</span>
+            </div>`).join('')}
+          <div style="padding:12px 18px 4px;border-top:1px solid var(--border);margin-top:6px;display:flex;flex-wrap:wrap;gap:8px">
+            ${porPago.map(p=>`<span class="tag bronze">${esc(p.nombre)}: ${money(p.total)}</span>`).join('') || '<span style="color:var(--muted);font-size:12px">Sin pagos registrados</span>'}
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div style="margin-top:18px;display:flex;gap:10px;flex-wrap:wrap">
+      <button class="btn primary" onclick="openVentaForm()">&#43; Registrar venta</button>
+      <button class="btn" onclick="navigate('ventas')">Ver todas las ventas</button>
+    </div>`;
+}
+
+/* ============================ VENTAS =================================== */
+function renderVentas(){
+  $('#topbar-action').innerHTML=`<button class="btn primary" onclick="openVentaForm()">&#43; Registrar venta</button>`;
+  const el=$('#view-ventas');
+
+  if(Store.peluqueroActivos().length===0){
+    el.innerHTML=`<div class="card empty">
+      <div class="big">&#9986;</div>
+      <h3>Primero agrega peluqueros</h3>
+      <p>Cada venta se asigna a un peluquero (y usa su % de comisión). Agrega al menos uno para empezar a registrar ingresos.</p>
+      <button class="btn primary" onclick="navigate('peluqueros')">Ir a Peluqueros</button>
+    </div>`;
+    return;
+  }
+
+  const p=state.params;
+  if(p.desde===undefined) p.desde=startOfMonth();
+  if(p.hasta===undefined) p.hasta=todayISO();
+  if(p.sort===undefined) p.sort={key:'fecha',dir:'desc'};
+
+  const lista=applySort(ventasFiltradas(p), p.sort, VENTA_GETTERS);
+  const totMonto=sum(lista,'monto'), totCom=sum(lista,'comision');
+
+  const cfg=Store.config();
+  const optLocales=`<option value="">Todos los locales</option>`+cfg.locales.map(l=>`<option value="${l.id}" ${p.localId===l.id?'selected':''}>${esc(l.nombre)}</option>`).join('');
+  const optPelu=`<option value="">Todos los peluqueros</option>`+Store.peluqueros().map(x=>`<option value="${x.id}" ${p.peluqueroId===x.id?'selected':''}>${esc(x.nombre)}</option>`).join('');
+  const optPago=`<option value="">Todas las formas</option>`+cfg.formasPago.map(f=>`<option value="${esc(f)}" ${p.formaPago===f?'selected':''}>${esc(f)}</option>`).join('');
+
+  el.innerHTML=`
+    <div class="card" style="padding:16px;margin-bottom:18px">
+      <div class="toolbar" style="margin-bottom:0">
+        <div class="field"><label class="lbl" style="margin-bottom:3px">Desde</label><input type="date" class="input" id="f-desde" value="${esc(p.desde||'')}" style="width:160px"></div>
+        <div class="field"><label class="lbl" style="margin-bottom:3px">Hasta</label><input type="date" class="input" id="f-hasta" value="${esc(p.hasta||'')}" style="width:160px"></div>
+        <div class="field"><label class="lbl" style="margin-bottom:3px">Local</label><select class="select" id="f-local" style="width:170px">${optLocales}</select></div>
+        <div class="field"><label class="lbl" style="margin-bottom:3px">Peluquero</label><select class="select" id="f-pelu" style="width:180px">${optPelu}</select></div>
+        <div class="field"><label class="lbl" style="margin-bottom:3px">Pago</label><select class="select" id="f-pago" style="width:150px">${optPago}</select></div>
+        <div class="spacer"></div>
+        <button class="btn sm ghost" id="f-clear">Limpiar</button>
+      </div>
+    </div>
+
+    <div class="toolbar">
+      <span class="tag bronze">${lista.length} venta(s)</span>
+      <span class="tag green">Ingresos: ${money(totMonto)}</span>
+      <span class="tag rose">Comisiones: ${money(totCom)}</span>
+      <span class="tag gray">Neto: ${money(totMonto-totCom)}</span>
+      <div class="spacer"></div>
+      <div class="field search"><span class="mag">&#128269;</span><input class="input" id="v-search" placeholder="Buscar servicio, folio, nota…" value="${esc(p.q||'')}"></div>
+    </div>
+
+    <div class="card">
+      ${lista.length?`
+      <div style="overflow-x:auto"><table>
+        <thead><tr>
+          ${sortTh('Fecha','fecha',p.sort)}${sortTh('Local','local',p.sort)}${sortTh('Peluquero','peluquero',p.sort)}${sortTh('Servicio','servicio',p.sort)}
+          ${sortTh('Pago','pago',p.sort)}${sortTh('Monto','monto',p.sort,'num')}${sortTh('Comisión','comision',p.sort,'num')}${sortTh('Folio','folio',p.sort)}<th></th>
+        </tr></thead>
+        <tbody>
+          ${lista.map(v=>`<tr>
+            <td><div class="t-main">${fmtFecha(v.fecha)}</div><div class="t-sub">${esc(v.hora||'')}</div></td>
+            <td><span class="tag gray">${esc(Store.localNombre(v.localId))}</span></td>
+            <td class="t-main">${esc(Store.peluNombre(v.peluqueroId))}</td>
+            <td>${esc(v.servicio||'—')}${v.notas?`<div class="t-sub">${esc(v.notas)}</div>`:''}</td>
+            <td><span class="tag bronze">${esc(v.formaPago||'—')}</span></td>
+            <td class="num money">${money(v.monto)}</td>
+            <td class="num" style="color:var(--accent-2)">${money(v.comision)} <span style="color:var(--muted);font-size:11px">(${v.comisionPct||0}%)</span></td>
+            <td>${v.folio?esc(v.folio):'<span style="color:var(--muted)">—</span>'}</td>
+            <td><div class="row-actions">
+              <button class="btn sm ghost" onclick="openVentaForm('${v.id}')">Editar</button>
+              <button class="btn sm danger" onclick="eliminarVenta('${v.id}')">&times;</button>
+            </div></td>
+          </tr>`).join('')}
+        </tbody>
+      </table></div>` : `
+      <div class="empty"><div class="big">&#128176;</div>
+        <h3>Sin ventas en este filtro</h3>
+        <p>Ajusta el rango de fechas o registra una nueva venta.</p>
+        <button class="btn primary" onclick="openVentaForm()">&#43; Registrar venta</button>
+      </div>`}
+    </div>`;
+
+  // listeners filtros
+  const re=()=>renderVentas();
+  $('#f-desde').onchange=e=>{ p.desde=e.target.value; re(); };
+  $('#f-hasta').onchange=e=>{ p.hasta=e.target.value; re(); };
+  $('#f-local').onchange=e=>{ p.localId=e.target.value; re(); };
+  $('#f-pelu').onchange=e=>{ p.peluqueroId=e.target.value; re(); };
+  $('#f-pago').onchange=e=>{ p.formaPago=e.target.value; re(); };
+  $('#f-clear').onclick=()=>{ state.params={desde:startOfMonth(),hasta:todayISO()}; re(); };
+  const s=$('#v-search');
+  if(s){ s.oninput=()=>{ p.q=s.value; const pos=s.selectionStart; renderVentas(); const ns=$('#v-search'); ns.focus(); ns.setSelectionRange(pos,pos); }; }
+  wireSortHeaders('#view-ventas', p, ()=>renderVentas());
+}
+
+function openVentaForm(id){
+  const v = id?Store.getVenta(id):{};
+  const cfg=Store.config();
+  const pelus=Store.peluqueroActivos();
+  if(pelus.length===0 && !id){ toast('Agrega peluqueros primero'); navigate('peluqueros'); return; }
+
+  const optPelu=pelus.map(p=>`<option value="${p.id}" data-pct="${p.comisionPct||0}" ${v.peluqueroId===p.id?'selected':''}>${esc(p.nombre)} (${p.comisionPct||0}%)</option>`).join('');
+  const optLocal=cfg.locales.map(l=>`<option value="${l.id}" ${ (v.localId||cfg.localActual)===l.id?'selected':''}>${esc(l.nombre)}</option>`).join('');
+  const optServ=cfg.servicios.map(s=>`<option value="${esc(s)}" ${v.servicio===s?'selected':''}>${esc(s)}</option>`).join('');
+  const optPago=cfg.formasPago.map(f=>`<option value="${esc(f)}" ${v.formaPago===f?'selected':''}>${esc(f)}</option>`).join('');
+
+  openModal(id?'Editar venta':'Registrar venta', `
+    <form id="v-form">
+      <div class="form-row two">
+        <div><label class="lbl">Fecha <span class="req">*</span></label>
+          <input class="input" type="date" name="fecha" value="${esc(v.fecha||todayISO())}" required></div>
+        <div><label class="lbl">Hora</label>
+          <input class="input" type="time" name="hora" value="${esc(v.hora||nowHM())}"></div>
+      </div>
+      <div class="form-row two">
+        <div><label class="lbl">Local <span class="req">*</span></label>
+          <select class="select" name="localId" required>${optLocal}</select></div>
+        <div><label class="lbl">Peluquero <span class="req">*</span></label>
+          <select class="select" name="peluqueroId" id="v-pelu" required>${optPelu}</select></div>
+      </div>
+      <div class="form-row two">
+        <div><label class="lbl">Servicio / categoría</label>
+          <select class="select" name="servicio">${optServ}</select></div>
+        <div><label class="lbl">Forma de pago <span class="req">*</span></label>
+          <select class="select" name="formaPago" required>${optPago}</select></div>
+      </div>
+      <div class="form-row two">
+        <div><label class="lbl">Monto <span class="req">*</span></label>
+          <input class="input" type="number" min="0" step="1" name="monto" id="v-monto" value="${v.monto!=null?v.monto:''}" placeholder="0" required></div>
+        <div><label class="lbl">N° boleta / folio</label>
+          <input class="input" name="folio" value="${esc(v.folio||'')}" placeholder="Opcional"></div>
+      </div>
+      <div class="form-row">
+        <label class="lbl">Notas</label>
+        <textarea class="input" name="notas" rows="2" placeholder="Detalle adicional (opcional)">${esc(v.notas||'')}</textarea>
+      </div>
+      <div class="calc-box" id="v-calc"></div>
+    </form>`,
+    `<button class="btn" data-close>Cancelar</button>
+     <button class="btn primary" id="v-save">${id?'Guardar cambios':'Registrar venta'}</button>`);
+
+  const form=$('#v-form');
+  const updateCalc=()=>{
+    const monto=Number(form.monto.value)||0;
+    const opt=form.peluqueroId.selectedOptions[0];
+    const pct=opt?Number(opt.dataset.pct)||0:0;
+    const com=calcComision(monto,pct);
+    $('#v-calc').innerHTML=`Comisión peluquero (<b>${pct}%</b>): <b style="color:var(--accent-2)">${money(com)}</b> &nbsp;·&nbsp; Neto salón: <b style="color:#2c7350">${money(monto-com)}</b>`;
+  };
+  form.peluqueroId.addEventListener('change',updateCalc);
+  form.monto.addEventListener('input',updateCalc);
+  updateCalc();
+
+  const save=()=>{
+    const fd=new FormData(form);
+    const monto=Number(fd.get('monto'));
+    if(!fd.get('fecha')){ toast('La fecha es obligatoria'); return; }
+    if(!fd.get('peluqueroId')){ toast('Selecciona un peluquero'); return; }
+    if(!(monto>0)){ toast('Ingresa un monto válido'); form.monto.classList.add('invalid'); return; }
+    const pelu=Store.getPelu(fd.get('peluqueroId'));
+    const pct=pelu?Number(pelu.comisionPct)||0:0;
+    const payload={
+      fecha:fd.get('fecha'), hora:fd.get('hora')||'',
+      localId:fd.get('localId'), peluqueroId:fd.get('peluqueroId'),
+      servicio:fd.get('servicio')||'', formaPago:fd.get('formaPago')||'',
+      monto:monto, comisionPct:pct, comision:calcComision(monto,pct),
+      folio:(fd.get('folio')||'').trim(), notas:(fd.get('notas')||'').trim()
+    };
+    if(id) Store.updateVenta(id,payload); else Store.insertVenta(payload);
+    closeModal(); renderView(state.view); toast(id?'Venta actualizada':'Venta registrada');
+  };
+  $('#v-save').onclick=save;
+  form.onsubmit=e=>{ e.preventDefault(); save(); };
+}
+
+function eliminarVenta(id){
+  const v=Store.getVenta(id); if(!v) return;
+  confirmDialog(`¿Eliminar esta venta de ${money(v.monto)} (${Store.peluNombre(v.peluqueroId)}, ${fmtFecha(v.fecha)})? No se puede deshacer.`, ()=>{
+    Store.removeVenta(id); renderView(state.view); toast('Venta eliminada');
+  });
+}
+
+/* ============================ EGRESOS ================================== */
+function renderEgresos(){
+  $('#topbar-action').innerHTML=`<button class="btn primary" onclick="openEgresoForm()">&#43; Registrar egreso</button>`;
+  const el=$('#view-egresos');
+  const p=state.params;
+  if(p.desde===undefined) p.desde=startOfMonth();
+  if(p.hasta===undefined) p.hasta=todayISO();
+  if(p.sort===undefined) p.sort={key:'fecha',dir:'desc'};
+
+  const lista=applySort(egresosFiltrados(p), p.sort, EGRESO_GETTERS);
+  const tot=sum(lista,'monto');
+  const totEfvo=sum(lista.filter(e=>e.formaPago==='Efectivo'),'monto');
+
+  const cfg=Store.config();
+  const optLocales=`<option value="">Todos los locales</option>`+cfg.locales.map(l=>`<option value="${l.id}" ${p.localId===l.id?'selected':''}>${esc(l.nombre)}</option>`).join('');
+  const optCat=`<option value="">Todas las categorías</option>`+cfg.categoriasEgreso.map(x=>`<option value="${esc(x)}" ${p.categoria===x?'selected':''}>${esc(x)}</option>`).join('');
+  const optPago=`<option value="">Todas las formas</option>`+cfg.formasPago.map(f=>`<option value="${esc(f)}" ${p.formaPago===f?'selected':''}>${esc(f)}</option>`).join('');
+
+  el.innerHTML=`
+    <div class="card" style="padding:16px;margin-bottom:18px">
+      <div class="toolbar" style="margin-bottom:0">
+        <div class="field"><label class="lbl" style="margin-bottom:3px">Desde</label><input type="date" class="input" id="e-desde" value="${esc(p.desde||'')}" style="width:160px"></div>
+        <div class="field"><label class="lbl" style="margin-bottom:3px">Hasta</label><input type="date" class="input" id="e-hasta" value="${esc(p.hasta||'')}" style="width:160px"></div>
+        <div class="field"><label class="lbl" style="margin-bottom:3px">Local</label><select class="select" id="e-local" style="width:170px">${optLocales}</select></div>
+        <div class="field"><label class="lbl" style="margin-bottom:3px">Categoría</label><select class="select" id="e-cat" style="width:180px">${optCat}</select></div>
+        <div class="field"><label class="lbl" style="margin-bottom:3px">Pago</label><select class="select" id="e-pago" style="width:150px">${optPago}</select></div>
+        <div class="spacer"></div>
+        <button class="btn sm ghost" id="e-clear">Limpiar</button>
+      </div>
+    </div>
+
+    <div class="toolbar">
+      <span class="tag amber">${lista.length} egreso(s)</span>
+      <span class="tag rose">Total: ${money(tot)}</span>
+      <span class="tag gray">En efectivo: ${money(totEfvo)}</span>
+      <div class="spacer"></div>
+      <div class="field search"><span class="mag">&#128269;</span><input class="input" id="e-search" placeholder="Buscar categoría, detalle…" value="${esc(p.q||'')}"></div>
+    </div>
+
+    <div class="card">
+      ${lista.length?`
+      <div style="overflow-x:auto"><table>
+        <thead><tr>
+          ${sortTh('Fecha','fecha',p.sort)}${sortTh('Local','local',p.sort)}${sortTh('Categoría','categoria',p.sort)}${sortTh('Detalle','detalle',p.sort)}${sortTh('Pago','pago',p.sort)}${sortTh('Monto','monto',p.sort,'num')}<th></th>
+        </tr></thead>
+        <tbody>
+          ${lista.map(e=>`<tr>
+            <td><div class="t-main">${fmtFecha(e.fecha)}</div><div class="t-sub">${esc(e.hora||'')}</div></td>
+            <td><span class="tag gray">${esc(Store.localNombre(e.localId))}</span></td>
+            <td class="t-main">${esc(e.categoria||'—')}</td>
+            <td>${e.detalle?esc(e.detalle):'<span style="color:var(--muted)">—</span>'}</td>
+            <td><span class="tag bronze">${esc(e.formaPago||'—')}</span></td>
+            <td class="num money" style="color:var(--red)">${money(e.monto)}</td>
+            <td><div class="row-actions">
+              <button class="btn sm ghost" onclick="openEgresoForm('${e.id}')">Editar</button>
+              <button class="btn sm danger" onclick="eliminarEgreso('${e.id}')">&times;</button>
+            </div></td>
+          </tr>`).join('')}
+        </tbody>
+      </table></div>` : `
+      <div class="empty"><div class="big">&#128184;</div>
+        <h3>Sin egresos en este filtro</h3>
+        <p>Registra gastos, compras de insumos, retiros de caja o pagos para que el cierre los descuente del efectivo.</p>
+        <button class="btn primary" onclick="openEgresoForm()">&#43; Registrar egreso</button>
+      </div>`}
+    </div>`;
+
+  const re=()=>renderEgresos();
+  $('#e-desde').onchange=ev=>{ p.desde=ev.target.value; re(); };
+  $('#e-hasta').onchange=ev=>{ p.hasta=ev.target.value; re(); };
+  $('#e-local').onchange=ev=>{ p.localId=ev.target.value; re(); };
+  $('#e-cat').onchange=ev=>{ p.categoria=ev.target.value; re(); };
+  $('#e-pago').onchange=ev=>{ p.formaPago=ev.target.value; re(); };
+  $('#e-clear').onclick=()=>{ state.params={desde:startOfMonth(),hasta:todayISO()}; re(); };
+  const s=$('#e-search');
+  if(s){ s.oninput=()=>{ p.q=s.value; const pos=s.selectionStart; renderEgresos(); const ns=$('#e-search'); ns.focus(); ns.setSelectionRange(pos,pos); }; }
+  wireSortHeaders('#view-egresos', p, ()=>renderEgresos());
+}
+
+function openEgresoForm(id, prefill){
+  const e = id?Store.getEgreso(id):{};
+  const cfg=Store.config();
+  const base = id ? e : (prefill||{});
+  const localSel = base.localId || cfg.localActual;
+  const optLocal=cfg.locales.map(l=>`<option value="${l.id}" ${localSel===l.id?'selected':''}>${esc(l.nombre)}</option>`).join('');
+  const optCat=cfg.categoriasEgreso.map(x=>`<option value="${esc(x)}" ${e.categoria===x?'selected':''}>${esc(x)}</option>`).join('');
+  const optPago=cfg.formasPago.map(f=>`<option value="${esc(f)}" ${(e.formaPago||'Efectivo')===f?'selected':''}>${esc(f)}</option>`).join('');
+
+  openModal(id?'Editar egreso':'Registrar egreso', `
+    <form id="e-form">
+      <div class="form-row two">
+        <div><label class="lbl">Fecha <span class="req">*</span></label>
+          <input class="input" type="date" name="fecha" value="${esc(e.fecha||base.fecha||todayISO())}" required></div>
+        <div><label class="lbl">Hora</label>
+          <input class="input" type="time" name="hora" value="${esc(e.hora||nowHM())}"></div>
+      </div>
+      <div class="form-row two">
+        <div><label class="lbl">Local <span class="req">*</span></label>
+          <select class="select" name="localId" required>${optLocal}</select></div>
+        <div><label class="lbl">Categoría</label>
+          <select class="select" name="categoria">${optCat}</select></div>
+      </div>
+      <div class="form-row two">
+        <div><label class="lbl">Monto <span class="req">*</span></label>
+          <input class="input" type="number" min="0" step="1" name="monto" id="e-monto" value="${e.monto!=null?e.monto:''}" placeholder="0" required></div>
+        <div><label class="lbl">Forma de pago <span class="req">*</span></label>
+          <select class="select" name="formaPago" required>${optPago}</select></div>
+      </div>
+      <div class="form-row">
+        <label class="lbl">Detalle / concepto</label>
+        <input class="input" name="detalle" value="${esc(e.detalle||'')}" placeholder="Ej. compra de tinturas, pago proveedor…">
+      </div>
+      <div class="hint">Los egresos en <b>Efectivo</b> se descuentan del arqueo de caja del día. Los de otras formas de pago no afectan el efectivo esperado.</div>
+    </form>`,
+    `<button class="btn" data-close>Cancelar</button>
+     <button class="btn primary" id="e-save">${id?'Guardar cambios':'Registrar egreso'}</button>`);
+
+  const form=$('#e-form');
+  const save=()=>{
+    const fd=new FormData(form);
+    const monto=Number(fd.get('monto'));
+    if(!fd.get('fecha')){ toast('La fecha es obligatoria'); return; }
+    if(!(monto>0)){ toast('Ingresa un monto válido'); form.monto.classList.add('invalid'); return; }
+    const payload={
+      fecha:fd.get('fecha'), hora:fd.get('hora')||'',
+      localId:fd.get('localId'), categoria:fd.get('categoria')||'',
+      monto:monto, formaPago:fd.get('formaPago')||'',
+      detalle:(fd.get('detalle')||'').trim()
+    };
+    if(id) Store.updateEgreso(id,payload); else Store.insertEgreso(payload);
+    closeModal(); renderView(state.view); toast(id?'Egreso actualizado':'Egreso registrado');
+  };
+  $('#e-save').onclick=save;
+  form.onsubmit=ev=>{ ev.preventDefault(); save(); };
+}
+
+function eliminarEgreso(id){
+  const e=Store.getEgreso(id); if(!e) return;
+  confirmDialog(`¿Eliminar este egreso de ${money(e.monto)} (${esc(e.categoria||'sin categoría')}, ${fmtFecha(e.fecha)})? No se puede deshacer.`, ()=>{
+    Store.removeEgreso(id); renderView(state.view); toast('Egreso eliminado');
+  });
+}
+
+/* ============================ CIERRE DE CAJA =========================== */
+function renderCierre(){
+  const el=$('#view-cierre');
+  const p=state.params;
+  if(p.fecha===undefined) p.fecha=todayISO();
+  if(p.localId===undefined) p.localId=Store.localActualId();
+  const cfg=Store.config();
+
+  const vs=Store.ventas().filter(v=>v.fecha===p.fecha && (!p.localId || v.localId===p.localId));
+  const egs=Store.egresos().filter(e=>e.fecha===p.fecha && (!p.localId || e.localId===p.localId));
+
+  const totalV=sum(vs,'monto'), totalCom=sum(vs,'comision'), totalE=sum(egs,'monto');
+  const resultado=totalV-totalE;
+
+  // Arqueo de efectivo
+  const ventaEfvo=sum(vs.filter(v=>v.formaPago==='Efectivo'),'monto');
+  const egresoEfvo=sum(egs.filter(e=>e.formaPago==='Efectivo'),'monto');
+  const fondo = p.localId ? Store.fondoDe(p.localId,p.fecha)
+                          : Store.locales().reduce((s,l)=>s+Store.fondoDe(l.id,p.fecha),0);
+  const efectivoEsperado = fondo + ventaEfvo - egresoEfvo;
+
+  const porPagoV=cfg.formasPago.map(fp=>({nombre:fp, n:vs.filter(v=>v.formaPago===fp).length, total:sum(vs.filter(v=>v.formaPago===fp),'monto')}));
+  const porPagoE=cfg.formasPago.map(fp=>({nombre:fp, n:egs.filter(e=>e.formaPago===fp).length, total:sum(egs.filter(e=>e.formaPago===fp),'monto')})).filter(x=>x.n>0);
+
+  $('#topbar-action').innerHTML=`<button class="btn ghost" onclick="window.print()">&#128424; Imprimir</button>`;
+
+  const optLocal=`<option value="">Todos los locales</option>`+cfg.locales.map(l=>`<option value="${l.id}" ${p.localId===l.id?'selected':''}>${esc(l.nombre)}</option>`).join('');
+  const fondoField = p.localId
+    ? `<div style="display:flex;gap:6px;align-items:center">
+         <input type="number" min="0" step="1" class="input" id="c-fondo" value="${fondo}" style="width:120px" placeholder="0">
+         <button class="btn sm primary" id="c-fondo-save">Guardar</button>
+       </div>`
+    : `<div style="display:flex;gap:6px;align-items:center">
+         <input class="input" value="${money(fondo)}" style="width:120px" disabled>
+         <span class="t-sub">Elegí un local para fijarlo</span>
+       </div>`;
+
+  el.innerHTML=`
+    <div class="card" style="padding:16px;margin-bottom:18px">
+      <div class="toolbar" style="margin-bottom:0">
+        <div class="field"><label class="lbl" style="margin-bottom:3px">Fecha</label><input type="date" class="input" id="c-fecha" value="${esc(p.fecha)}" style="width:160px"></div>
+        <div class="field"><label class="lbl" style="margin-bottom:3px">Local</label><select class="select" id="c-local" style="width:180px">${optLocal}</select></div>
+        <div class="field"><label class="lbl" style="margin-bottom:3px">Fondo inicial</label>${fondoField}</div>
+        <div class="spacer"></div>
+        <div style="text-align:right"><div class="t-sub">Resultado del día</div><div style="font-size:24px;font-weight:800;font-family:var(--serif);color:${resultado<0?'var(--red)':'#2c7350'}">${money(resultado)}</div><div class="t-sub">ventas − egresos</div></div>
+      </div>
+      ${p.localId?`<div class="t-sub" style="margin-top:10px;border-top:1px solid var(--border);padding-top:10px">&#128205; ${esc(Store.localNombre(p.localId))} — ${esc(Store.localDireccion(p.localId)||'sin dirección')}</div>`:''}
+    </div>
+
+    <div class="card" style="margin-bottom:18px">
+      <div class="panel-head"><h3>Arqueo de efectivo</h3><span class="t-sub">${p.localId?esc(Store.localNombre(p.localId)):'Todos los locales'} · ${fmtFecha(p.fecha)}</span></div>
+      <div class="arqueo-row"><span>Fondo inicial</span><b>${money(fondo)}</b></div>
+      <div class="arqueo-row"><span>+ Ventas en efectivo</span><b style="color:#2c7350">${money(ventaEfvo)}</b></div>
+      <div class="arqueo-row"><span>− Egresos en efectivo</span><b style="color:var(--red)">${money(egresoEfvo)}</b></div>
+      <div class="arqueo-row total"><span>= Efectivo esperado en caja</span><b>${money(efectivoEsperado)}</b></div>
+      <div style="padding:12px 18px;display:flex;flex-wrap:wrap;gap:8px;border-top:1px solid var(--border)">
+        <span class="tag green">Ventas: ${money(totalV)}</span>
+        <span class="tag amber">Egresos: ${money(totalE)}</span>
+        <span class="tag bronze">Resultado: ${money(resultado)}</span>
+        <span class="tag rose">Comisiones: ${money(totalCom)}</span>
+      </div>
+    </div>
+
+    <div class="panel-grid">
+      <div class="card">
+        <div class="panel-head"><h3>Ventas por forma de pago</h3></div>
+        <table>
+          <thead><tr><th>Forma de pago</th><th class="num">N°</th><th class="num">Total</th></tr></thead>
+          <tbody>
+            ${porPagoV.map(x=>`<tr>
+              <td><span class="tag bronze">${esc(x.nombre)}</span></td>
+              <td class="num">${x.n}</td>
+              <td class="num money">${money(x.total)}</td>
+            </tr>`).join('')}
+            <tr style="background:var(--surface-2)"><td class="t-main">TOTAL</td><td class="num t-main">${vs.length}</td><td class="num money" style="font-size:15px">${money(totalV)}</td></tr>
+          </tbody>
+        </table>
+        <div style="padding:10px 16px;border-top:1px solid var(--border);display:flex;justify-content:space-between;font-size:13px">
+          <span>Comisiones del día</span><b style="color:var(--accent-2)">${money(totalCom)}</b>
+        </div>
+        <div style="padding:6px 16px 12px;display:flex;justify-content:space-between;font-size:13px">
+          <span>Neto salón (ventas − comisiones)</span><b style="color:#2c7350">${money(totalV-totalCom)}</b>
+        </div>
+      </div>
+      <div class="card">
+        <div class="panel-head"><h3>Egresos del día (${egs.length})</h3>
+          <button class="btn sm primary" id="c-add-egreso">&#43; Egreso</button></div>
+        ${egs.length?`
+        <table>
+          <thead><tr><th>Forma de pago</th><th class="num">N°</th><th class="num">Total</th></tr></thead>
+          <tbody>
+            ${porPagoE.map(x=>`<tr>
+              <td><span class="tag bronze">${esc(x.nombre)}</span></td>
+              <td class="num">${x.n}</td>
+              <td class="num money" style="color:var(--red)">${money(x.total)}</td>
+            </tr>`).join('')}
+            <tr style="background:var(--surface-2)"><td class="t-main">TOTAL</td><td class="num t-main">${egs.length}</td><td class="num money" style="font-size:15px;color:var(--red)">${money(totalE)}</td></tr>
+          </tbody>
+        </table>
+        <div style="border-top:1px solid var(--border)">
+          ${egs.slice().sort((a,b)=>(a.hora||'').localeCompare(b.hora||'')).map(e=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:9px 16px;border-bottom:1px solid var(--border);font-size:13px">
+            <span>${esc(e.categoria||'—')}${e.detalle?` <span class="t-sub">· ${esc(e.detalle)}</span>`:''} <span class="tag gray" style="margin-left:4px">${esc(e.formaPago||'')}</span></span>
+            <b style="color:var(--red)">${money(e.monto)}</b>
+          </div>`).join('')}
+        </div>`:'<div class="empty" style="padding:32px"><p>Sin egresos para esta fecha y local.</p><button class="btn primary" id="c-add-egreso2">&#43; Registrar egreso</button></div>'}
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:18px">
+      <div class="panel-head"><h3>Detalle de ventas (${vs.length})</h3></div>
+      ${vs.length?`<div style="overflow-x:auto"><table>
+        <thead><tr><th>Hora</th><th>Peluquero</th><th>Servicio</th><th>Pago</th><th class="num">Monto</th></tr></thead>
+        <tbody>${vs.slice().sort((a,b)=>(a.hora||'').localeCompare(b.hora||'')).map(v=>`<tr>
+          <td>${esc(v.hora||'—')}</td>
+          <td class="t-main">${esc(Store.peluNombre(v.peluqueroId))}</td>
+          <td>${esc(v.servicio||'—')}</td>
+          <td><span class="tag gray">${esc(v.formaPago||'—')}</span></td>
+          <td class="num money">${money(v.monto)}</td>
+        </tr>`).join('')}</tbody>
+      </table></div>`:'<div class="empty" style="padding:36px"><p>Sin ventas para esta fecha y local.</p></div>'}
+    </div>`;
+
+  $('#c-fecha').onchange=e=>{ p.fecha=e.target.value; renderCierre(); };
+  $('#c-local').onchange=e=>{ p.localId=e.target.value; renderCierre(); };
+  const cf=$('#c-fondo'), cfBtn=$('#c-fondo-save');
+  const guardarFondo=()=>{ Store.setFondo(p.localId,p.fecha,Number(cf.value)||0); renderCierre(); toast('Fondo inicial guardado'); };
+  if(cfBtn && cf) cfBtn.onclick=guardarFondo;
+  if(cf) cf.onkeydown=e=>{ if(e.key==='Enter'){ e.preventDefault(); guardarFondo(); } };
+  const addEg=()=>openEgresoForm(null,{fecha:p.fecha, localId:p.localId||Store.localActualId()});
+  const b1=$('#c-add-egreso'), b2=$('#c-add-egreso2');
+  if(b1) b1.onclick=addEg; if(b2) b2.onclick=addEg;
+}
+
+/* ============================ REPORTES ================================= */
+function renderReportes(){
+  const el=$('#view-reportes');
+  const p=state.params;
+  if(p.desde===undefined) p.desde=startOfMonth();
+  if(p.hasta===undefined) p.hasta=todayISO();
+  if(p.dim===undefined) p.dim='peluquero';
+
+  const cfg=Store.config();
+  const lista=ventasFiltradas({desde:p.desde,hasta:p.hasta,localId:p.localId});
+  const totMonto=sum(lista,'monto'), totCom=sum(lista,'comision');
+
+  // agrupación según dimensión
+  let grupos=[];
+  if(p.dim==='peluquero'){
+    const map={}; lista.forEach(v=>{ (map[v.peluqueroId]=map[v.peluqueroId]||[]).push(v); });
+    grupos=Object.entries(map).map(([id,vs])=>({label:Store.peluNombre(id), vs}));
+  } else if(p.dim==='local'){
+    const map={}; lista.forEach(v=>{ (map[v.localId]=map[v.localId]||[]).push(v); });
+    grupos=Object.entries(map).map(([id,vs])=>({label:Store.localNombre(id), vs}));
+  } else if(p.dim==='servicio'){
+    const map={}; lista.forEach(v=>{ const k=v.servicio||'(sin servicio)'; (map[k]=map[k]||[]).push(v); });
+    grupos=Object.entries(map).map(([k,vs])=>({label:k, vs}));
+  } else { // forma de pago
+    const map={}; lista.forEach(v=>{ const k=v.formaPago||'(sin pago)'; (map[k]=map[k]||[]).push(v); });
+    grupos=Object.entries(map).map(([k,vs])=>({label:k, vs}));
+  }
+  grupos=grupos.map(g=>({label:g.label, n:g.vs.length, monto:sum(g.vs,'monto'), com:sum(g.vs,'comision')}))
+               .sort((a,b)=>b.monto-a.monto);
+  const maxM=Math.max(1,...grupos.map(g=>g.monto));
+
+  const optLocal=`<option value="">Todos los locales</option>`+cfg.locales.map(l=>`<option value="${l.id}" ${p.localId===l.id?'selected':''}>${esc(l.nombre)}</option>`).join('');
+  const showCom = p.dim==='peluquero';
+
+  el.innerHTML=`
+    <div class="card" style="padding:16px;margin-bottom:18px">
+      <div class="toolbar" style="margin-bottom:0">
+        <div class="field"><label class="lbl" style="margin-bottom:3px">Desde</label><input type="date" class="input" id="r-desde" value="${esc(p.desde)}" style="width:160px"></div>
+        <div class="field"><label class="lbl" style="margin-bottom:3px">Hasta</label><input type="date" class="input" id="r-hasta" value="${esc(p.hasta)}" style="width:160px"></div>
+        <div class="field"><label class="lbl" style="margin-bottom:3px">Local</label><select class="select" id="r-local" style="width:180px">${optLocal}</select></div>
+        <div class="spacer"></div>
+        <button class="btn" id="r-export">&#11015; Exportar Excel</button>
+      </div>
+      <div style="margin-top:14px;display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+        <span class="t-sub">Agrupar por:</span>
+        <div class="seg" id="r-seg">
+          <button data-dim="peluquero" class="${p.dim==='peluquero'?'on':''}">Peluquero</button>
+          <button data-dim="local" class="${p.dim==='local'?'on':''}">Local</button>
+          <button data-dim="servicio" class="${p.dim==='servicio'?'on':''}">Servicio</button>
+          <button data-dim="formaPago" class="${p.dim==='formaPago'?'on':''}">Forma de pago</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="stat-grid">
+      <div class="card stat"><div class="lbl"><span class="ic ic-teal">&#128181;</span> Ingresos</div><div class="val">${money(totMonto)}</div><div class="foot">${lista.length} venta(s)</div></div>
+      <div class="card stat"><div class="lbl"><span class="ic ic-rose">&#129689;</span> Comisiones</div><div class="val" style="color:var(--accent-2)">${money(totCom)}</div><div class="foot">del período</div></div>
+      <div class="card stat"><div class="lbl"><span class="ic ic-green">&#127974;</span> Neto salón</div><div class="val" style="color:#2c7350">${money(totMonto-totCom)}</div><div class="foot">ingresos − comisiones</div></div>
+    </div>
+
+    <div class="card">
+      <div class="panel-head"><h3>Detalle por ${p.dim==='formaPago'?'forma de pago':p.dim}</h3></div>
+      ${grupos.length?`<div style="overflow-x:auto"><table>
+        <thead><tr><th>${p.dim==='formaPago'?'Forma de pago':p.dim.charAt(0).toUpperCase()+p.dim.slice(1)}</th><th class="num">Ventas</th><th class="num">Ingresos</th>${showCom?'<th class="num">Comisión</th><th class="num">Neto</th>':''}<th style="width:30%">Participación</th></tr></thead>
+        <tbody>
+          ${grupos.map(g=>`<tr>
+            <td class="t-main">${esc(g.label)}</td>
+            <td class="num">${g.n}</td>
+            <td class="num money">${money(g.monto)}</td>
+            ${showCom?`<td class="num" style="color:var(--accent-2)">${money(g.com)}</td><td class="num" style="color:#2c7350">${money(g.monto-g.com)}</td>`:''}
+            <td><span class="bar-track" style="display:inline-block;width:100%;vertical-align:middle"><span class="bar-fill" style="width:${g.monto/maxM*100}%"></span></span></td>
+          </tr>`).join('')}
+          <tr style="background:var(--surface-2)"><td class="t-main">TOTAL</td><td class="num t-main">${lista.length}</td><td class="num money">${money(totMonto)}</td>${showCom?`<td class="num" style="color:var(--accent-2)">${money(totCom)}</td><td class="num" style="color:#2c7350">${money(totMonto-totCom)}</td>`:''}<td></td></tr>
+        </tbody>
+      </table></div>`:'<div class="empty" style="padding:40px"><p>Sin datos en este período.</p></div>'}
+    </div>`;
+
+  $('#r-desde').onchange=e=>{ p.desde=e.target.value; renderReportes(); };
+  $('#r-hasta').onchange=e=>{ p.hasta=e.target.value; renderReportes(); };
+  $('#r-local').onchange=e=>{ p.localId=e.target.value; renderReportes(); };
+  $$('#r-seg button').forEach(b=>b.onclick=()=>{ p.dim=b.dataset.dim; renderReportes(); });
+  $('#r-export').onclick=()=>exportReporteXLSX(lista, p);
+}
+
+function exportReporteXLSX(lista, p){
+  if(typeof XLSX==='undefined'){ toast('Librería Excel no disponible'); return; }
+  if(!lista.length){ toast('No hay ventas para exportar'); return; }
+  const rows=lista.slice().sort((a,b)=>(a.fecha+(a.hora||'')).localeCompare(b.fecha+(b.hora||''))).map(v=>({
+    Fecha:v.fecha, Hora:v.hora||'', Local:Store.localNombre(v.localId), Peluquero:Store.peluNombre(v.peluqueroId),
+    Servicio:v.servicio||'', 'Forma de pago':v.formaPago||'', Monto:Number(v.monto)||0,
+    'Comisión %':v.comisionPct||0, Comisión:Number(v.comision)||0, 'Neto salón':(Number(v.monto)||0)-(Number(v.comision)||0),
+    Folio:v.folio||'', Notas:v.notas||''
+  }));
+  const wb=XLSX.utils.book_new();
+  const ws=XLSX.utils.json_to_sheet(rows);
+  XLSX.utils.book_append_sheet(wb,ws,'Ventas');
+  const fn=`Reporte_${Store.config().salonNombre||'salon'}_${p.desde}_a_${p.hasta}.xlsx`.replace(/\s+/g,'_');
+  XLSX.writeFile(wb,fn);
+  toast('Excel exportado');
+}
+
+/* ============================ COMISIONES =============================== */
+function renderComisiones(){
+  const el=$('#view-comisiones');
+  const p=state.params;
+  if(p.desde===undefined) p.desde=startOfMonth();
+  if(p.hasta===undefined) p.hasta=todayISO();
+  const cfg=Store.config();
+
+  const lista=ventasFiltradas({desde:p.desde,hasta:p.hasta,localId:p.localId});
+  const map={};
+  lista.forEach(v=>{ (map[v.peluqueroId]=map[v.peluqueroId]||[]).push(v); });
+  const filas=Object.entries(map).map(([id,vs])=>({
+    id, nombre:Store.peluNombre(id), n:vs.length, monto:sum(vs,'monto'), com:sum(vs,'comision'),
+    pct: (Store.getPelu(id)||{}).comisionPct
+  })).sort((a,b)=>b.com-a.com);
+  const totCom=sum(filas.map(f=>({comision:f.com})),'comision');
+  const totMonto=sum(filas.map(f=>({monto:f.monto})),'monto');
+
+  const optLocal=`<option value="">Todos los locales</option>`+cfg.locales.map(l=>`<option value="${l.id}" ${p.localId===l.id?'selected':''}>${esc(l.nombre)}</option>`).join('');
+
+  $('#topbar-action').innerHTML=`<button class="btn ghost" onclick="window.print()">&#128424; Imprimir</button>`;
+
+  el.innerHTML=`
+    <div class="card" style="padding:16px;margin-bottom:18px">
+      <div class="toolbar" style="margin-bottom:0">
+        <div class="field"><label class="lbl" style="margin-bottom:3px">Desde</label><input type="date" class="input" id="cm-desde" value="${esc(p.desde)}" style="width:160px"></div>
+        <div class="field"><label class="lbl" style="margin-bottom:3px">Hasta</label><input type="date" class="input" id="cm-hasta" value="${esc(p.hasta)}" style="width:160px"></div>
+        <div class="field"><label class="lbl" style="margin-bottom:3px">Local</label><select class="select" id="cm-local" style="width:180px">${optLocal}</select></div>
+        <div class="spacer"></div>
+        <div style="text-align:right"><div class="t-sub">Total a pagar en comisiones</div><div style="font-size:24px;font-weight:800;font-family:var(--serif);color:var(--accent-2)">${money(totCom)}</div></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="panel-head"><h3>Liquidación por peluquero</h3><span class="t-sub">${fmtFecha(p.desde)} — ${fmtFecha(p.hasta)}</span></div>
+      ${filas.length?`<div style="overflow-x:auto"><table>
+        <thead><tr><th>Peluquero</th><th class="num">Ventas</th><th class="num">Ingresos generados</th><th class="num">% comisión</th><th class="num">Comisión a pagar</th></tr></thead>
+        <tbody>
+          ${filas.map(f=>`<tr>
+            <td class="t-main">${esc(f.nombre)}</td>
+            <td class="num">${f.n}</td>
+            <td class="num money">${money(f.monto)}</td>
+            <td class="num">${f.pct!=null?f.pct+'%':'—'}</td>
+            <td class="num money" style="color:var(--accent-2)">${money(f.com)}</td>
+          </tr>`).join('')}
+          <tr style="background:var(--surface-2)"><td class="t-main">TOTAL</td><td class="num t-main">${lista.length}</td><td class="num money">${money(totMonto)}</td><td></td><td class="num money" style="color:var(--accent-2);font-size:15px">${money(totCom)}</td></tr>
+        </tbody>
+      </table></div>`:'<div class="empty" style="padding:40px"><p>Sin comisiones en este período.</p></div>'}
+    </div>
+    <p class="hint" style="margin-top:12px">La comisión de cada venta se calcula con el % que tenía el peluquero al momento de registrarla. Cambiar el % de un peluquero no altera las ventas ya guardadas.</p>`;
+
+  $('#cm-desde').onchange=e=>{ p.desde=e.target.value; renderComisiones(); };
+  $('#cm-hasta').onchange=e=>{ p.hasta=e.target.value; renderComisiones(); };
+  $('#cm-local').onchange=e=>{ p.localId=e.target.value; renderComisiones(); };
+}
+
+/* ============================ PELUQUEROS =============================== */
+function renderPeluqueros(){
+  $('#topbar-action').innerHTML=`<button class="btn primary" onclick="openPeluForm()">&#43; Nuevo peluquero</button>`;
+  const el=$('#view-peluqueros');
+  const lista=Store.peluqueros().slice().sort((a,b)=>a.nombre.localeCompare(b.nombre));
+  const mes=monthISO();
+
+  el.innerHTML=`
+    <div class="card">
+      ${lista.length?`<table>
+        <thead><tr><th>Peluquero</th><th class="num">% comisión</th><th class="num">Ventas (mes)</th><th class="num">Ingresos (mes)</th><th>Estado</th><th></th></tr></thead>
+        <tbody>
+          ${lista.map(p=>{
+            const vs=Store.ventas().filter(v=>v.peluqueroId===p.id && (v.fecha||'').slice(0,7)===mes);
+            return `<tr>
+              <td class="t-main">${esc(p.nombre)}</td>
+              <td class="num"><span class="tag bronze">${p.comisionPct||0}%</span></td>
+              <td class="num">${vs.length}</td>
+              <td class="num money">${money(sum(vs,'monto'))}</td>
+              <td>${p.activo!==false?'<span class="tag green">Activo</span>':'<span class="tag gray">Inactivo</span>'}</td>
+              <td><div class="row-actions">
+                <button class="btn sm ghost" onclick="openPeluForm('${p.id}')">Editar</button>
+                <button class="btn sm danger" onclick="eliminarPelu('${p.id}')">Eliminar</button>
+              </div></td>
+            </tr>`;
+          }).join('')}
+        </tbody>
+      </table>`:`<div class="empty"><div class="big">&#9986;</div>
+        <h3>Aún no hay peluqueros</h3>
+        <p>Agrega a tu equipo con su porcentaje de comisión. Ese % se aplicará automáticamente a cada venta que registres.</p>
+        <button class="btn primary" onclick="openPeluForm()">&#43; Nuevo peluquero</button>
+      </div>`}
+    </div>`;
+}
+
+function openPeluForm(id){
+  const p = id?Store.getPelu(id):{};
+  openModal(id?'Editar peluquero':'Nuevo peluquero', `
+    <form id="p-form">
+      <div class="form-row">
+        <label class="lbl">Nombre <span class="req">*</span></label>
+        <input class="input" name="nombre" value="${esc(p.nombre||'')}" required autofocus placeholder="Nombre y apellido">
+      </div>
+      <div class="form-row two">
+        <div><label class="lbl">% de comisión <span class="req">*</span></label>
+          <input class="input" type="number" name="comisionPct" min="0" max="100" step="0.5" value="${p.comisionPct!=null?p.comisionPct:40}" required>
+          <div class="hint">Porcentaje del monto de cada venta que recibe el peluquero.</div>
+        </div>
+        <div><label class="lbl">Estado</label>
+          <select class="select" name="activo">
+            <option value="1" ${p.activo!==false?'selected':''}>Activo</option>
+            <option value="0" ${p.activo===false?'selected':''}>Inactivo</option>
+          </select>
+        </div>
+      </div>
+    </form>`,
+    `<button class="btn" data-close>Cancelar</button>
+     <button class="btn primary" id="p-save">Guardar</button>`);
+
+  const form=$('#p-form');
+  const save=()=>{
+    const fd=new FormData(form);
+    const nombre=(fd.get('nombre')||'').trim();
+    if(!nombre){ toast('El nombre es obligatorio'); return; }
+    let pct=Number(fd.get('comisionPct')); if(isNaN(pct)||pct<0) pct=0; if(pct>100) pct=100;
+    const payload={ nombre, comisionPct:pct, activo:fd.get('activo')==='1' };
+    if(id) Store.updatePelu(id,payload); else Store.insertPelu(payload);
+    closeModal(); renderView(state.view); refreshChrome(); toast(id?'Peluquero actualizado':'Peluquero agregado');
+  };
+  $('#p-save').onclick=save;
+  form.onsubmit=e=>{ e.preventDefault(); save(); };
+}
+
+function eliminarPelu(id){
+  const p=Store.getPelu(id); if(!p) return;
+  const n=Store.ventas().filter(v=>v.peluqueroId===id).length;
+  if(n>0){
+    confirmDialog(`"${p.nombre}" tiene ${n} venta(s) registradas. Si lo eliminas, esas ventas quedarán sin peluquero asignado. ¿Prefieres marcarlo como Inactivo en su lugar? Pulsa Eliminar para borrarlo de todas formas.`, ()=>{
+      Store.removePelu(id); renderView(state.view); refreshChrome(); toast('Peluquero eliminado');
+    });
+  } else {
+    confirmDialog(`¿Eliminar a "${p.nombre}"?`, ()=>{ Store.removePelu(id); renderView(state.view); refreshChrome(); toast('Peluquero eliminado'); });
+  }
+}
+
+/* ============================ CONFIGURACIÓN =========================== */
+function renderConfig(){
+  const el=$('#view-config');
+  const c=Store.config();
+  const optLocalActual=c.locales.map(l=>`<option value="${l.id}" ${c.localActual===l.id?'selected':''}>${esc(l.nombre)}</option>`).join('');
+
+  el.innerHTML=`
+    <div class="panel-grid">
+      <div class="card" style="padding:18px">
+        <h3 style="margin:0 0 14px;font-family:var(--serif)">Identidad del salón</h3>
+        <div class="form-row"><label class="lbl">Nombre del salón</label>
+          <input class="input" id="cfg-nombre" value="${esc(c.salonNombre||'')}"></div>
+        <div class="form-row"><label class="lbl">Local de ESTE equipo</label>
+          <select class="select" id="cfg-localactual">${optLocalActual}</select>
+          <div class="hint">Las ventas nuevas tomarán este local por defecto (igual puedes cambiarlo en cada venta).</div>
+        </div>
+        <button class="btn primary" id="cfg-save-ident">Guardar</button>
+      </div>
+
+      <div class="card" style="padding:18px">
+        <h3 style="margin:0 0 14px;font-family:var(--serif)">Locales (3)</h3>
+        <div id="cfg-locales" style="display:flex;flex-direction:column;gap:12px">
+          ${c.locales.map((l,i)=>`<div style="display:flex;gap:8px;align-items:flex-start">
+            <span class="tag gray" style="margin-top:9px">${i+1}</span>
+            <div style="flex:1;display:flex;flex-direction:column;gap:6px">
+              <input class="input cfg-local-input" data-id="${l.id}" value="${esc(l.nombre)}" placeholder="Alias (ej. Pelu Varas)">
+              <input class="input cfg-local-dir" data-id="${l.id}" value="${esc(l.direccion||'')}" placeholder="Dirección del local" style="font-size:12.5px">
+            </div>
+          </div>`).join('')}
+        </div>
+        <div class="hint" style="margin-top:8px">Alias (nombre corto que ve el equipo) y dirección de cada local. (No se pueden borrar para mantener la consistencia entre dispositivos.)</div>
+        <button class="btn primary" id="cfg-save-locales" style="margin-top:12px">Guardar locales</button>
+      </div>
+
+      <div class="card" style="padding:18px">
+        <h3 style="margin:0 0 12px;font-family:var(--serif)">Formas de pago</h3>
+        <div class="chips" id="cfg-formas">
+          ${c.formasPago.map(f=>`<span class="chip">${esc(f)}<span class="x" data-tipo="formasPago" data-val="${esc(f)}">&times;</span></span>`).join('')}
+        </div>
+        <div style="display:flex;gap:8px;margin-top:12px">
+          <input class="input" id="cfg-forma-new" placeholder="Agregar forma de pago…">
+          <button class="btn" id="cfg-forma-add">Agregar</button>
+        </div>
+      </div>
+
+      <div class="card" style="padding:18px">
+        <h3 style="margin:0 0 12px;font-family:var(--serif)">Servicios / categorías</h3>
+        <div class="chips" id="cfg-servicios">
+          ${c.servicios.map(s=>`<span class="chip">${esc(s)}<span class="x" data-tipo="servicios" data-val="${esc(s)}">&times;</span></span>`).join('')}
+        </div>
+        <div style="display:flex;gap:8px;margin-top:12px">
+          <input class="input" id="cfg-serv-new" placeholder="Agregar servicio…">
+          <button class="btn" id="cfg-serv-add">Agregar</button>
+        </div>
+      </div>
+
+      <div class="card" style="padding:18px">
+        <h3 style="margin:0 0 12px;font-family:var(--serif)">Categorías de egreso</h3>
+        <div class="chips" id="cfg-categorias">
+          ${c.categoriasEgreso.map(s=>`<span class="chip">${esc(s)}<span class="x" data-tipo="categoriasEgreso" data-val="${esc(s)}">&times;</span></span>`).join('')}
+        </div>
+        <div style="display:flex;gap:8px;margin-top:12px">
+          <input class="input" id="cfg-cat-new" placeholder="Agregar categoría de egreso…">
+          <button class="btn" id="cfg-cat-add">Agregar</button>
+        </div>
+      </div>
+    </div>`;
+
+  $('#cfg-save-ident').onclick=()=>{
+    Store.setConfig({ salonNombre:($('#cfg-nombre').value||'Salón').trim(), localActual:$('#cfg-localactual').value });
+    refreshChrome(); toast('Datos guardados');
+  };
+  $('#cfg-save-locales').onclick=()=>{
+    const locales=c.locales.map(l=>{
+      const inp=$(`.cfg-local-input[data-id="${l.id}"]`);
+      const dir=$(`.cfg-local-dir[data-id="${l.id}"]`);
+      return { id:l.id, nombre:(inp.value||l.nombre).trim(), direccion:(dir?dir.value:(l.direccion||'')).trim() };
+    });
+    Store.setConfig({ locales }); refreshChrome(); renderConfig(); toast('Locales actualizados');
+  };
+  const addItem=(tipo,inputId)=>{
+    const v=($(inputId).value||'').trim(); if(!v) return;
+    const arr=Store.config()[tipo];
+    if(!arr.includes(v)){ arr.push(v); Store.save(); }
+    renderConfig();
+  };
+  $('#cfg-forma-add').onclick=()=>addItem('formasPago','#cfg-forma-new');
+  $('#cfg-serv-add').onclick=()=>addItem('servicios','#cfg-serv-new');
+  $('#cfg-cat-add').onclick=()=>addItem('categoriasEgreso','#cfg-cat-new');
+  $('#cfg-forma-new').onkeydown=e=>{ if(e.key==='Enter'){ e.preventDefault(); addItem('formasPago','#cfg-forma-new'); } };
+  $('#cfg-serv-new').onkeydown=e=>{ if(e.key==='Enter'){ e.preventDefault(); addItem('servicios','#cfg-serv-new'); } };
+  $('#cfg-cat-new').onkeydown=e=>{ if(e.key==='Enter'){ e.preventDefault(); addItem('categoriasEgreso','#cfg-cat-new'); } };
+  $$('#view-config .chip .x').forEach(x=>x.onclick=()=>{
+    const tipo=x.dataset.tipo, val=x.dataset.val, arr=Store.config()[tipo];
+    if(arr.length<=1){ toast('Debe quedar al menos una opción'); return; }
+    Store.config()[tipo]=arr.filter(v=>v!==val); Store.save(); renderConfig();
+  });
+}
+
+/* ============================ DATOS / RESPALDO ======================== */
+function renderDatos(){
+  const el=$('#view-datos');
+  const d=Store.data;
+  el.innerHTML=`
+    <div class="card" style="padding:18px;margin-bottom:18px">
+      <h3 style="margin:0 0 6px;font-family:var(--serif)">Resumen de este dispositivo</h3>
+      <p class="t-sub" style="margin:0 0 14px">Local de este equipo: <b>${esc(Store.localNombre(Store.localActualId()))}</b></p>
+      <div class="chips">
+        <span class="tag bronze">${d.ventas.length} venta(s)</span>
+        <span class="tag amber">${d.egresos.length} egreso(s)</span>
+        <span class="tag rose">${d.peluqueros.length} peluquero(s)</span>
+        <span class="tag green">${money(sum(d.ventas,'monto'))} en ingresos</span>
+        <span class="tag gray">${money(sum(d.egresos,'monto'))} en egresos</span>
+      </div>
+    </div>
+
+    <div class="panel-grid">
+      <div class="card" style="padding:18px">
+        <h3 style="margin:0 0 8px;font-family:var(--serif)">Respaldo / Exportar</h3>
+        <p class="t-sub" style="margin:0 0 14px">Descarga una copia de todos los datos de este local en un archivo JSON. Guárdalo como respaldo o úsalo para consolidar los 3 locales.</p>
+        <button class="btn primary" id="d-export">&#11015; Exportar datos (JSON)</button>
+      </div>
+
+      <div class="card" style="padding:18px">
+        <h3 style="margin:0 0 8px;font-family:var(--serif)">Consolidar / Importar</h3>
+        <p class="t-sub" style="margin:0 0 14px">Carga el JSON exportado desde <b>otro local</b>. Las ventas y egresos se <b>fusionan por ID</b>: no se duplican ni se pisan. Así reúnes los 3 locales en este equipo para ver el total.</p>
+        <input type="file" id="d-file" accept="application/json,.json" style="display:none">
+        <button class="btn" id="d-import">&#11014; Importar y fusionar</button>
+        <div class="hint" id="d-import-st"></div>
+      </div>
+
+      <div class="card" style="padding:18px">
+        <h3 style="margin:0 0 8px;font-family:var(--serif)">Datos de ejemplo</h3>
+        <p class="t-sub" style="margin:0 0 14px">Carga ventas y peluqueros ficticios para probar la app. Se suman a lo que ya tengas.</p>
+        <button class="btn" id="d-seed">Cargar datos de ejemplo</button>
+      </div>
+
+      <div class="card" style="padding:18px;border-color:#f0d5d2">
+        <h3 style="margin:0 0 8px;font-family:var(--serif);color:var(--red)">Zona de riesgo</h3>
+        <p class="t-sub" style="margin:0 0 14px">Borra TODAS las ventas, egresos, fondos y peluqueros de este dispositivo. Se conserva la configuración (locales, formas de pago, servicios, categorías). No se puede deshacer.</p>
+        <button class="btn danger" id="d-clear" style="border:1px solid #f0c4c0">Borrar datos operativos</button>
+      </div>
+    </div>`;
+
+  $('#d-export').onclick=()=>{
+    const blob=new Blob([Store.exportJSON()],{type:'application/json'});
+    const url=URL.createObjectURL(blob); const a=document.createElement('a');
+    const localTag=(Store.localNombre(Store.localActualId())||'local').replace(/\s+/g,'_');
+    a.href=url; a.download=`salon_${localTag}_${todayISO()}.json`; a.click();
+    URL.revokeObjectURL(url); toast('Datos exportados');
+  };
+  $('#d-import').onclick=()=>$('#d-file').click();
+  $('#d-file').onchange=e=>{
+    const file=e.target.files[0]; if(!file) return;
+    const reader=new FileReader();
+    reader.onload=()=>{
+      try{
+        const inc=JSON.parse(reader.result);
+        const res=mergeData(inc);
+        renderDatos(); refreshChrome();
+        $('#d-import-st').innerHTML=`<span style="color:var(--green)">✓ Importado: ${res.ventasNuevas} venta(s) nueva(s), ${res.ventasActual} actualizada(s), ${res.egresosNuevos} egreso(s) nuevo(s), ${res.peluNuevos} peluquero(s) nuevo(s).</span>`;
+        toast('Datos fusionados');
+      }catch(err){ $('#d-import-st').innerHTML=`<span class="hint err">No se pudo leer el archivo: ${esc(err.message)}</span>`; }
+    };
+    reader.readAsText(file);
+    e.target.value='';
+  };
+  $('#d-seed').onclick=()=>{ seedDemo(); renderDatos(); refreshChrome(); toast('Datos de ejemplo cargados'); };
+  $('#d-clear').onclick=()=>{
+    confirmDialog('¿Borrar todas las ventas, egresos, fondos y peluqueros de este dispositivo? Esta acción no se puede deshacer.', ()=>{
+      Store.data.ventas=[]; Store.data.egresos=[]; Store.data.fondos=[]; Store.data.peluqueros=[]; Store.save();
+      renderDatos(); refreshChrome(); toast('Datos borrados');
+    }, 'Borrar todo');
+  };
+}
+
+/* Fusiona datos importados sin pisar: ventas por id, peluqueros por id o nombre */
+function mergeData(inc){
+  let ventasNuevas=0, ventasActual=0, peluNuevos=0;
+  // peluqueros
+  if(Array.isArray(inc.peluqueros)){
+    inc.peluqueros.forEach(p=>{
+      let ex=Store.getPelu(p.id) || Store.peluqueros().find(x=>x.nombre.toLowerCase()===String(p.nombre||'').toLowerCase());
+      if(!ex){ Store.data.peluqueros.push(Object.assign({},p)); peluNuevos++; }
+    });
+  }
+  // locales: agrega los que no existan por nombre (para no perder referencias en ventas importadas)
+  if(inc.config && Array.isArray(inc.config.locales)){
+    inc.config.locales.forEach(l=>{
+      const ex=Store.locales().find(x=>x.id===l.id);
+      if(!ex){ Store.config().locales.push({id:l.id,nombre:l.nombre}); }
+    });
+  }
+  // ventas
+  if(Array.isArray(inc.ventas)){
+    inc.ventas.forEach(v=>{
+      const ex=Store.getVenta(v.id);
+      if(!ex){ Store.data.ventas.push(Object.assign({},v)); ventasNuevas++; }
+      else if((v.updatedAt||0)>(ex.updatedAt||0)){ Object.assign(ex,v); ventasActual++; }
+    });
+  }
+  // egresos (mismo criterio: por id, gana el updatedAt más reciente)
+  let egresosNuevos=0;
+  if(Array.isArray(inc.egresos)){
+    inc.egresos.forEach(e=>{
+      const ex=Store.getEgreso(e.id);
+      if(!ex){ Store.data.egresos.push(Object.assign({},e)); egresosNuevos++; }
+      else if((e.updatedAt||0)>(ex.updatedAt||0)){ Object.assign(ex,e); }
+    });
+  }
+  // fondos (por local+fecha, gana el más reciente)
+  if(Array.isArray(inc.fondos)){
+    inc.fondos.forEach(f=>{
+      const ex=Store.data.fondos.find(x=>x.localId===f.localId && x.fecha===f.fecha);
+      if(!ex) Store.data.fondos.push(Object.assign({},f));
+      else if((f.updatedAt||0)>(ex.updatedAt||0)){ ex.monto=f.monto; ex.updatedAt=f.updatedAt; }
+    });
+  }
+  Store.save();
+  return {ventasNuevas, ventasActual, peluNuevos, egresosNuevos};
+}
+
+/* ============================ DEMO ===================================== */
+function seedDemo(){
+  const c=Store.config();
+  // peluqueros demo si no hay
+  if(Store.peluqueros().length===0){
+    [['Camila Rojas',45],['Andrés Soto',40],['Valentina Pérez',50],['Marco Díaz',35]]
+      .forEach(([n,p])=>Store.insertPelu({nombre:n, comisionPct:p}));
+  }
+  const pelus=Store.peluqueroActivos();
+  const locales=c.locales;
+  const servicios=c.servicios;
+  const formas=c.formasPago;
+  const cats=c.categoriasEgreso;
+  const rand=a=>a[Math.floor(Math.random()*a.length)];
+  const montos=[8000,12000,15000,18000,22000,25000,30000,35000,45000];
+  const montosEgreso=[3000,5000,8000,12000,15000,20000,30000];
+  const detalles=['Tinturas','Shampoo y acond.','Toallas','Café y agua','Pago proveedor','Boletas','Aseo'];
+  const hoy=new Date();
+  for(let d=0; d<24; d++){
+    const fecha=new Date(hoy); fecha.setDate(hoy.getDate()-d);
+    const iso=fecha.toISOString().slice(0,10);
+    const nVentas=2+Math.floor(Math.random()*5);
+    for(let i=0;i<nVentas;i++){
+      const pelu=rand(pelus);
+      const monto=rand(montos);
+      Store.data.ventas.push({
+        id:uid(), fecha:iso, hora:String(9+Math.floor(Math.random()*10)).padStart(2,'0')+':'+rand(['00','15','30','45']),
+        localId:rand(locales).id, peluqueroId:pelu.id, servicio:rand(servicios),
+        formaPago:rand(formas), monto, comisionPct:pelu.comisionPct||0, comision:calcComision(monto,pelu.comisionPct||0),
+        folio:'B-'+(1000+Math.floor(Math.random()*9000)), notas:'', createdAt:Date.now(), updatedAt:Date.now()
+      });
+    }
+    // 0-2 egresos por día
+    const nEg=Math.floor(Math.random()*3);
+    for(let i=0;i<nEg;i++){
+      Store.data.egresos.push({
+        id:uid(), fecha:iso, hora:String(9+Math.floor(Math.random()*9)).padStart(2,'0')+':'+rand(['10','20','40']),
+        localId:rand(locales).id, categoria:rand(cats), monto:rand(montosEgreso),
+        formaPago:rand(['Efectivo','Efectivo','Débito','Transferencia']), detalle:rand(detalles),
+        createdAt:Date.now(), updatedAt:Date.now()
+      });
+    }
+  }
+  // fondo inicial de hoy por local
+  const isoHoy=todayISO();
+  locales.forEach(l=>{ if(!Store.data.fondos.find(f=>f.localId===l.id && f.fecha===isoHoy)) Store.data.fondos.push({id:uid(),localId:l.id,fecha:isoHoy,monto:30000,updatedAt:Date.now()}); });
+  Store.save();
+}
+
+/* ================== SINCRONIZACIÓN CON GOOGLE SHEETS ==================
+   Portado de los esqueletos Taller/Nexa: Google Identity Services (GIS) para
+   el login + Sheets API v4 por fetch. DIFERENCIA CLAVE: aquí el sync FUSIONA
+   por id (no "el último que sube manda"), para que los 3 locales compartan
+   una misma planilla sin pisarse. Requiere que los locales tengan ids fijos
+   (local-unimarc / local-outlet / local-varas), garantizado en Store.load().
+   ===================================================================== */
+const GS = {
+  token:null, tokenExpiry:null, clientId:'', sheetId:'',
+  SCOPES:'https://www.googleapis.com/auth/spreadsheets',
+  SHEETS:['Peluqueros','Ventas','Egresos','Fondos','Config']
+};
+const GS_HEADERS = {
+  Peluqueros:['id','nombre','comisionPct','activo','createdAt','updatedAt'],
+  Ventas:['id','fecha','hora','localId','peluqueroId','servicio','formaPago','monto','comisionPct','comision','folio','notas','createdAt','updatedAt'],
+  Egresos:['id','fecha','hora','localId','categoria','monto','formaPago','detalle','createdAt','updatedAt'],
+  Fondos:['id','localId','fecha','monto','updatedAt'],
+  Config:['key','value']
+};
+function gsCell(v){ if(v===undefined||v===null) return ''; if(typeof v==='object') return JSON.stringify(v); return String(v); }
+function objToRow(obj,headers){ return headers.map(h=>gsCell(obj[h])); }
+function rowToObj(row,headers){ const o={}; headers.forEach((h,i)=>{ o[h]=row[i]!==undefined?row[i]:''; }); return o; }
+function gsNum(v){ const n=Number(v); return isNaN(n)?0:n; }
+function gsCoerce(col,o){
+  if(col==='peluqueros'){ o.comisionPct=gsNum(o.comisionPct); o.activo=!(o.activo==='false'||o.activo==='FALSE'||o.activo===false); o.createdAt=gsNum(o.createdAt); o.updatedAt=gsNum(o.updatedAt); }
+  else if(col==='ventas'){ o.monto=gsNum(o.monto); o.comisionPct=gsNum(o.comisionPct); o.comision=gsNum(o.comision); o.createdAt=gsNum(o.createdAt); o.updatedAt=gsNum(o.updatedAt); }
+  else if(col==='egresos'){ o.monto=gsNum(o.monto); o.createdAt=gsNum(o.createdAt); o.updatedAt=gsNum(o.updatedAt); }
+  return o;
+}
+
+/* Credenciales locales (no se suben a la planilla) */
+function gsExtractSheetId(v){ const m=/\/spreadsheets\/d\/([a-zA-Z0-9_-]+)/.exec(v); return m?m[1]:v; }
+function gsSaveConfig(clientId, sheetId){ GS.clientId=clientId; GS.sheetId=sheetId; Store.data.gsConfig={clientId,sheetId}; Store.save(); }
+function gsLoadConfig(){ const g=Store.data.gsConfig; if(g){ GS.clientId=g.clientId||''; GS.sheetId=g.sheetId||''; } }
+
+/* Auth con Google Identity Services */
+function gsSignIn(){
+  if(!GS.clientId||!GS.sheetId){ syncStatus('Ingresa el Client ID y el link de la planilla primero.','err'); return; }
+  if(!/\.apps\.googleusercontent\.com$/.test(GS.clientId)){ syncStatus('El Client ID parece incompleto: debe terminar en ".apps.googleusercontent.com" (cópialo COMPLETO desde Google Cloud, es el "ID de cliente", no la clave secreta).','err'); return; }
+  if(!(window.google&&google.accounts&&google.accounts.oauth2)){ syncStatus('La librería de Google aún no carga. Espera unos segundos y reintenta.','warn'); return; }
+  try{
+    const client=google.accounts.oauth2.initTokenClient({
+      client_id:GS.clientId, scope:GS.SCOPES,
+      callback:(resp)=>{
+        if(resp.error){ syncStatus('Error de autorización: '+resp.error,'err'); return; }
+        GS.token=resp.access_token; GS.tokenExpiry=Date.now()+((resp.expires_in||3600)-60)*1000;
+        syncStatus('Conectado a Google. La sesión dura ~1 hora.','ok');
+        if(state.view==='sync') renderSync();
+      }
+    });
+    client.requestAccessToken();
+  }catch(e){ syncStatus('No se pudo iniciar Google. Revisa el Client ID y el origen autorizado.','err'); }
+}
+function gsSignOut(){ try{ if(GS.token&&window.google) google.accounts.oauth2.revoke(GS.token,()=>{}); }catch(e){} GS.token=null; GS.tokenExpiry=null; if(state.view==='sync') renderSync(); toast('Desconectado de Google'); }
+function gsIsSignedIn(){ return !!(GS.token && Date.now()<GS.tokenExpiry); }
+
+/* Sheets API v4 */
+async function gsRequest(method, endpoint, body){
+  const url='https://sheets.googleapis.com/v4/spreadsheets/'+GS.sheetId+endpoint;
+  const opts={ method, headers:{ 'Authorization':'Bearer '+GS.token, 'Content-Type':'application/json' } };
+  if(body) opts.body=JSON.stringify(body);
+  const res=await fetch(url,opts);
+  if(!res.ok){ let m=res.statusText; try{ const e=await res.json(); m=(e.error&&e.error.message)||m; }catch(_){ } throw new Error(m); }
+  return res.json();
+}
+async function gsEnsureSheets(){
+  const meta=await gsRequest('GET','?fields=sheets.properties.title');
+  const existing=(meta.sheets||[]).map(s=>s.properties.title);
+  const toCreate=GS.SHEETS.filter(s=>!existing.includes(s));
+  if(toCreate.length) await gsRequest('POST',':batchUpdate',{requests:toCreate.map(title=>({addSheet:{properties:{title}}}))});
+}
+async function gsWriteSheet(name, data, headers){
+  await gsRequest('POST','/values/'+encodeURIComponent(name+'!A1:ZZ')+':clear',{});
+  const rows=[headers, ...data.map(o=>objToRow(o,headers))];
+  await gsRequest('PUT','/values/'+encodeURIComponent(name+'!A1')+'?valueInputOption=RAW',{range:name+'!A1',majorDimension:'ROWS',values:rows});
+}
+async function gsReadSheet(name, headers){
+  const res=await gsRequest('GET','/values/'+encodeURIComponent(name+'!A1:ZZ'));
+  if(!res.values||res.values.length<2) return [];
+  return res.values.slice(1).map(r=>rowToObj(r,headers));
+}
+
+/* MERGE por id (gana el updatedAt más reciente; agrega lo que falte) */
+function gsMergeColeccion(col, remoteRows){
+  if(!Array.isArray(Store.data[col])) Store.data[col]=[];
+  const map=new Map(Store.data[col].map(o=>[o.id,o]));
+  let added=0, updated=0;
+  remoteRows.forEach(r=>{
+    if(!r.id) return;
+    const ex=map.get(r.id);
+    if(!ex){ map.set(r.id,r); added++; }
+    else if((Number(r.updatedAt)||0)>(Number(ex.updatedAt)||0)){ map.set(r.id,r); updated++; }
+  });
+  Store.data[col]=Array.from(map.values());
+  return {added,updated};
+}
+function gsMergeFondos(remoteRows){
+  remoteRows.forEach(r=>{
+    if(!r.localId||!r.fecha) return;
+    const monto=gsNum(r.monto), up=gsNum(r.updatedAt);
+    const ex=Store.data.fondos.find(f=>f.localId===r.localId && f.fecha===r.fecha);
+    if(!ex) Store.data.fondos.push({id:r.id||uid(),localId:r.localId,fecha:r.fecha,monto,updatedAt:up});
+    else if(up>(ex.updatedAt||0)){ ex.monto=monto; ex.updatedAt=up; }
+  });
+}
+function gsMergeConfig(rows){
+  const m={}; rows.forEach(r=>{ if(r.key) m[r.key]=r.value; });
+  const c=Store.config();
+  const pj=(v)=>{ try{ return v?JSON.parse(v):null; }catch(e){ return null; } };
+  if(m.salonNombre) c.salonNombre=m.salonNombre;
+  const L=pj(m.locales); if(Array.isArray(L)&&L.length) c.locales=L;
+  const F=pj(m.formasPago); if(Array.isArray(F)&&F.length) c.formasPago=F;
+  const S=pj(m.servicios); if(Array.isArray(S)&&S.length) c.servicios=S;
+  const G=pj(m.categoriasEgreso); if(Array.isArray(G)&&G.length) c.categoriasEgreso=G;
+  // localActual y gsConfig NO se tocan: son propios de este equipo
+}
+function gsConfigRows(){
+  const c=Store.config();
+  return [
+    {key:'salonNombre', value:c.salonNombre||''},
+    {key:'locales', value:JSON.stringify(c.locales||[])},
+    {key:'formasPago', value:JSON.stringify(c.formasPago||[])},
+    {key:'servicios', value:JSON.stringify(c.servicios||[])},
+    {key:'categoriasEgreso', value:JSON.stringify(c.categoriasEgreso||[])},
+    {key:'lastSync', value:new Date().toISOString()}
+  ];
+}
+
+/* Pull + merge (sin subir) */
+async function gsPull(){
+  if(!gsIsSignedIn()){ syncStatus('Conéctate con Google primero.','warn'); return; }
+  syncStatus('Cargando desde Google Sheets…','info');
+  try{
+    await gsEnsureSheets();
+    const [pe,ve,eg,fo,cf]=await Promise.all([
+      gsReadSheet('Peluqueros',GS_HEADERS.Peluqueros),
+      gsReadSheet('Ventas',GS_HEADERS.Ventas),
+      gsReadSheet('Egresos',GS_HEADERS.Egresos),
+      gsReadSheet('Fondos',GS_HEADERS.Fondos),
+      gsReadSheet('Config',GS_HEADERS.Config)
+    ]);
+    const rp=gsMergeColeccion('peluqueros', pe.map(o=>gsCoerce('peluqueros',o)));
+    const rv=gsMergeColeccion('ventas', ve.map(o=>gsCoerce('ventas',o)));
+    const rg=gsMergeColeccion('egresos', eg.map(o=>gsCoerce('egresos',o)));
+    gsMergeFondos(fo); gsMergeConfig(cf);
+    Store.save(); refreshChrome();
+    syncStatus(`✓ Cargado y fusionado: +${rv.added} ventas, +${rg.added} egresos, +${rp.added} peluqueros (sin pisar lo de este equipo).`,'ok');
+    if(state.view==='sync') renderSync();
+    toast('Datos fusionados desde Sheets');
+  }catch(e){ syncStatus('Error al cargar: '+(e.message||e),'err'); }
+}
+
+/* Sincronizar = pull + merge + push del conjunto fusionado (recomendado) */
+async function gsSync(){
+  if(!gsIsSignedIn()){ syncStatus('Conéctate con Google primero.','warn'); return; }
+  syncStatus('Sincronizando con Google Sheets…','info');
+  try{
+    await gsEnsureSheets();
+    const [pe,ve,eg,fo,cf]=await Promise.all([
+      gsReadSheet('Peluqueros',GS_HEADERS.Peluqueros),
+      gsReadSheet('Ventas',GS_HEADERS.Ventas),
+      gsReadSheet('Egresos',GS_HEADERS.Egresos),
+      gsReadSheet('Fondos',GS_HEADERS.Fondos),
+      gsReadSheet('Config',GS_HEADERS.Config)
+    ]);
+    const rp=gsMergeColeccion('peluqueros', pe.map(o=>gsCoerce('peluqueros',o)));
+    const rv=gsMergeColeccion('ventas', ve.map(o=>gsCoerce('ventas',o)));
+    const rg=gsMergeColeccion('egresos', eg.map(o=>gsCoerce('egresos',o)));
+    gsMergeFondos(fo); gsMergeConfig(cf);
+    Store.save();
+    await Promise.all([
+      gsWriteSheet('Peluqueros', Store.peluqueros(), GS_HEADERS.Peluqueros),
+      gsWriteSheet('Ventas',     Store.ventas(),     GS_HEADERS.Ventas),
+      gsWriteSheet('Egresos',    Store.egresos(),    GS_HEADERS.Egresos),
+      gsWriteSheet('Fondos',     Store.data.fondos,  GS_HEADERS.Fondos),
+      gsWriteSheet('Config',     gsConfigRows(),     GS_HEADERS.Config)
+    ]);
+    Store.data.lastSync=new Date().toLocaleString('es-CL'); Store.save(); refreshChrome();
+    syncStatus(`✓ Sincronizado. Llegaron +${rv.added} ventas y +${rg.added} egresos. La planilla quedó con ${Store.ventas().length} ventas y ${Store.egresos().length} egresos en total.`,'ok');
+    if(state.view==='sync') renderSync();
+    toast('Sincronizado con Google Sheets');
+  }catch(e){ syncStatus('Error al sincronizar: '+(e.message||e),'err'); }
+}
+
+function syncStatus(msg,type){ const el=document.getElementById('sync-status'); if(el){ el.style.display='block'; el.className='sync-status sync-'+(type||'info'); el.textContent=msg; } }
+function gsSaveFromUI(thenConnect){
+  const cid=($('#gs-client').value||'').replace(/\s+/g,'');
+  const sid=gsExtractSheetId(($('#gs-sheet').value||'').trim());
+  if(!cid||!sid){ syncStatus('Completa el Client ID y el link de la planilla.','warn'); return; }
+  if(!/\.apps\.googleusercontent\.com$/.test(cid)){ syncStatus('El Client ID debe terminar en ".apps.googleusercontent.com". Cópialo COMPLETO desde Google Cloud.','err'); return; }
+  gsSaveConfig(cid,sid);
+  if(thenConnect) gsSignIn(); else syncStatus('Credenciales guardadas en este equipo.','ok');
+}
+
+function renderSync(){
+  const el=$('#view-sync'); gsLoadConfig();
+  const conf=!!(GS.clientId&&GS.sheetId), conn=gsIsSignedIn();
+  $('#topbar-action').innerHTML = conn?`<button class="btn primary" onclick="gsSync()">&#128260; Sincronizar ahora</button>`:'';
+  el.innerHTML=`
+    <div class="card" style="margin-bottom:16px">
+      <div class="panel-head"><h3>Conexión con Google Sheets</h3>
+        <span class="tag ${conn?'green':(conf?'bronze':'gray')}">${conn?'Conectado':(conf?'Configurado':'Sin configurar')}</span></div>
+      <div style="padding:18px">
+        <div class="form-row"><label class="lbl">Client ID de Google Cloud</label>
+          <input class="input" id="gs-client" value="${esc(GS.clientId)}" placeholder="xxxxxxxx.apps.googleusercontent.com"></div>
+        <div class="form-row"><label class="lbl">Planilla de Google (pega el link completo o el ID)</label>
+          <input class="input" id="gs-sheet" value="${esc(GS.sheetId)}" placeholder="https://docs.google.com/spreadsheets/d/…/edit"></div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:4px">
+          <button class="btn" onclick="gsSaveFromUI(false)">Guardar credenciales</button>
+          ${conn? `<button class="btn danger" onclick="gsSignOut()">Desconectar</button>`
+                : `<button class="btn primary" onclick="gsSaveFromUI(true)">Conectar con Google</button>`}
+        </div>
+        <div id="sync-status" class="sync-status" style="display:none;margin-top:14px"></div>
+      </div>
+    </div>
+
+    <div class="card" style="margin-bottom:16px">
+      <div class="panel-head"><h3>Sincronizar los 3 locales</h3>
+        ${Store.data.lastSync?`<span class="t-sub">Última vez: ${esc(Store.data.lastSync)}</span>`:''}</div>
+      <div style="padding:18px;display:flex;gap:10px;flex-wrap:wrap">
+        <button class="btn primary" ${conn?'':'disabled'} onclick="gsSync()">&#128260; Sincronizar ahora</button>
+        <button class="btn" ${conn?'':'disabled'} onclick="gsPull()">&#11015;&#65039; Solo cargar (fusionar)</button>
+      </div>
+      <div style="padding:0 18px 16px;color:var(--text-dim);font-size:12.5px;line-height:1.7">
+        <b>Sincronizar ahora</b> trae lo de la planilla, lo <b>fusiona</b> con lo de este equipo (sin pisar nada) y vuelve a subir el total. Es lo que conviene usar al abrir y al cerrar el día en cada local.<br>
+        Como fusiona por ID, los 3 locales pueden sincronizar el mismo día sin borrarse entre sí.
+      </div>
+    </div>
+
+    <div class="card" style="margin-bottom:16px">
+      <div class="panel-head"><h3>Cómo dejarlo funcionando (una sola vez)</h3></div>
+      <div style="padding:18px;color:var(--text-dim);font-size:13px;line-height:1.85">
+        Como usás un <b>correo distinto</b> al de Nexa y Taller, NO reutilices ese Client ID: creá uno nuevo en este proyecto de Google.<br>
+        1. En <b>Google Cloud</b> (con el nuevo correo) creá un proyecto y un “ID de cliente OAuth” tipo <em>Aplicación web</em>.<br>
+        2. En <em>Orígenes autorizados de JavaScript</em> agregá la URL de esta app en GitHub Pages (ej. <em>https://tu-usuario.github.io</em>).<br>
+        3. Activá la <b>API de Google Sheets</b> en ese proyecto.<br>
+        4. Creá una <b>planilla</b> nueva en ese Drive y copiá su link.<br>
+        5. Pegá el Client ID y el link acá arriba, guardá y conectá. La primera sincronización crea las hojas solas.<br>
+        <span style="color:var(--accent-2)">Los 3 locales usan el MISMO Client ID y la MISMA planilla; cada equipo configura esto una vez.</span>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="panel-head"><h3>Estructura de la planilla</h3></div>
+      <div style="padding:18px;color:var(--text-dim);font-size:12.5px;line-height:1.7">
+        Se crean 5 hojas automáticamente: <b>Peluqueros, Ventas, Egresos, Fondos y Config</b>. No las edites a mano salvo que sepas lo que hacés; la app las reescribe en cada sincronización con el conjunto fusionado.
+      </div>
+    </div>`;
+}
+
+/* ============================ INIT ===================================== */
+// Conectar los botones de la barra lateral al router
+$$('.nav-item[data-view]').forEach(b=>b.addEventListener('click',()=>navigate(b.dataset.view)));
+Store.load();
+refreshChrome();
+navigate('dashboard');
+</script>
+</body>
+</html>
